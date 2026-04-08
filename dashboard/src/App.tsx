@@ -1,0 +1,633 @@
+import { useEffect, useMemo, useState } from 'react'
+import {
+  BellRing,
+  Coins,
+  Download,
+  Megaphone,
+  MousePointerClick,
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
+  Users,
+} from 'lucide-react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import './App.css'
+
+type MonthlyOverviewRow = {
+  report_month: string
+  new_members: number | null
+  app_downloads: number | null
+  withdrawals: number | null
+  net_growth: number | null
+  cumulative_conversion_eom: number | null
+  active_members_eom: number | null
+  sms_opt_in_members: number | null
+  push_opt_in_members: number | null
+  event_participant_count: number | null
+  total_points_issued: number | null
+  points_used: number | null
+  point_usage_rate: number | null
+  linked_sales_amount: number | null
+  impressions: number | null
+  clicks: number | null
+  cpc: number | null
+  ctr: number | null
+  conversions: number | null
+  conversion_rate: number | null
+  ad_revenue: number | null
+  ad_spend_markup_vat_exclusive: number | null
+  roas_markup_vat_exclusive: number | null
+}
+
+type PromotionRow = {
+  report_month: string
+  promotion_type: string
+  point_amount: number | null
+  participant_count: number | null
+  probability: number | null
+  total_points_issued: number | null
+  points_used: number | null
+  point_usage_rate: number | null
+  linked_sales_amount: number | null
+}
+
+type AdCampaignRow = {
+  report_month: string
+  media: string | null
+  placement_name: string | null
+  period_text: string | null
+  campaign_goal: string | null
+  impressions: number | null
+  clicks: number | null
+  cpc: number | null
+  ctr: number | null
+  conversions: number | null
+  conversion_rate: number | null
+  revenue: number | null
+  average_order_value: number | null
+  ad_spend_vat_inclusive: number | null
+  ad_spend_vat_exclusive: number | null
+  ad_spend_markup_vat_exclusive: number | null
+  roas_vat_exclusive: number | null
+  roas_markup_vat_exclusive: number | null
+  creative_text: string | null
+  note: string | null
+}
+
+type DailyMemberRow = {
+  report_date: string
+  report_month: string
+  member_count: number | null
+  app_downloads: number | null
+  withdrawals: number | null
+  net_growth: number | null
+  cumulative_conversion: number | null
+  active_members: number | null
+  is_month_end: boolean | null
+  issue_note: string | null
+}
+
+type DashboardPayload = {
+  overview: MonthlyOverviewRow[]
+  promotions: PromotionRow[]
+  campaigns: AdCampaignRow[]
+  memberDaily: DailyMemberRow[]
+}
+
+type MetricCardProps = {
+  title: string
+  value: string
+  delta: string
+  helper: string
+  accent: 'amber' | 'slate' | 'emerald' | 'violet' | 'sky' | 'rose' | 'gray'
+  icon: React.ReactNode
+}
+
+const MEMBER_TARGET_2026 = 280_000
+const APP_DOWNLOAD_TARGET_2026 = 130_000
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const sourceSheetUrl = import.meta.env.VITE_SOURCE_SHEET_URL as string | undefined
+
+const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
+
+const numberFormatter = new Intl.NumberFormat('ko-KR')
+const currencyFormatter = new Intl.NumberFormat('ko-KR', {
+  style: 'currency',
+  currency: 'KRW',
+  maximumFractionDigits: 0,
+})
+const ratioPercentFormatter = new Intl.NumberFormat('ko-KR', {
+  style: 'percent',
+  maximumFractionDigits: 1,
+})
+
+function monthLabel(value: string) {
+  return value.slice(0, 7)
+}
+
+function formatNumber(value: number | null | undefined) {
+  if (value === null || value === undefined) return '-'
+  return numberFormatter.format(value)
+}
+
+function formatCurrency(value: number | null | undefined) {
+  if (value === null || value === undefined) return '-'
+  return currencyFormatter.format(value)
+}
+
+function formatRatio(value: number | null | undefined) {
+  if (value === null || value === undefined) return '-'
+  return ratioPercentFormatter.format(value)
+}
+
+function formatSigned(value: number | null | undefined, suffix = '') {
+  if (value === null || value === undefined) return '데이터 없음'
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${numberFormatter.format(value)}${suffix}`
+}
+
+function calculateDelta(current: number | null | undefined, previous: number | null | undefined) {
+  if (current === null || current === undefined || previous === null || previous === undefined) {
+    return null
+  }
+  return current - previous
+}
+
+function summarizeChange(current: number | null | undefined, previous: number | null | undefined, unit = '') {
+  const delta = calculateDelta(current, previous)
+  if (delta === null) return '전월 비교 데이터 없음'
+  if (delta === 0) return `전월과 동일${unit ? ` (${unit})` : ''}`
+  return `전월 대비 ${formatSigned(delta, unit)}`
+}
+
+function achievementText(current: number | null | undefined, target: number) {
+  if (current === null || current === undefined) return `목표 ${formatNumber(target)} 기준 데이터 없음`
+  const ratio = current / target
+  return `${formatNumber(current)} / ${formatNumber(target)} (${ratioPercentFormatter.format(ratio)})`
+}
+
+function latestNonZeroDailyActivity(rows: DailyMemberRow[], reportMonth: string) {
+  return rows
+    .filter((row) => row.report_month === reportMonth && (row.active_members ?? 0) > 0)
+    .sort((a, b) => a.report_date.localeCompare(b.report_date))
+    .at(-1)
+}
+
+function averageDailyActivity(rows: DailyMemberRow[], reportMonth: string) {
+  const values = rows
+    .filter((row) => row.report_month === reportMonth && (row.active_members ?? 0) > 0)
+    .map((row) => row.active_members ?? 0)
+
+  if (!values.length) return null
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+}
+
+function MetricCard({ title, value, delta, helper, accent, icon }: MetricCardProps) {
+  return (
+    <article className={`metric-card metric-card--${accent}`}>
+      <div className="metric-card__header">
+        <span className="metric-card__icon">{icon}</span>
+        <span className="metric-card__title">{title}</span>
+      </div>
+      <strong className="metric-card__value">{value}</strong>
+      <p className="metric-card__delta">{delta}</p>
+      <p className="metric-card__helper">{helper}</p>
+    </article>
+  )
+}
+
+async function fetchDashboardData() {
+  if (!supabase) {
+    throw new Error('Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+  }
+
+  const [overviewResult, promotionResult, campaignResult, memberDailyResult] = await Promise.all([
+    supabase.from('dashboard_monthly_overview').select('*').order('report_month', { ascending: false }),
+    supabase.from('dashboard_promotion_breakdown').select('*').order('report_month', { ascending: false }),
+    supabase.from('dashboard_ad_campaign_breakdown').select('*').order('report_month', { ascending: false }),
+    supabase.from('dashboard_member_daily').select('*').order('report_date', { ascending: false }),
+  ])
+
+  if (overviewResult.error) throw overviewResult.error
+  if (promotionResult.error) throw promotionResult.error
+  if (campaignResult.error) throw campaignResult.error
+  if (memberDailyResult.error) throw memberDailyResult.error
+
+  return {
+    overview: overviewResult.data as MonthlyOverviewRow[],
+    promotions: promotionResult.data as PromotionRow[],
+    campaigns: campaignResult.data as AdCampaignRow[],
+    memberDaily: memberDailyResult.data as DailyMemberRow[],
+  } satisfies DashboardPayload
+}
+
+function App() {
+  const [data, setData] = useState<DashboardPayload | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState<string>('')
+
+  useEffect(() => {
+    let active = true
+
+    async function load() {
+      try {
+        setLoading(true)
+        setError(null)
+        const payload = await fetchDashboardData()
+        if (!active) return
+
+        const meaningfulMonths = payload.overview
+          .filter((row) => row.cumulative_conversion_eom !== null)
+          .map((row) => row.report_month)
+
+        setData(payload)
+        setSelectedMonth((current) => current || meaningfulMonths[0] || payload.overview[0]?.report_month || '')
+      } catch (loadError) {
+        if (!active) return
+        const message = loadError instanceof Error ? loadError.message : 'Unknown error'
+        setError(message)
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    void load()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const meaningfulOverview = useMemo(() => {
+    if (!data) return []
+    return data.overview
+      .filter((row) => row.cumulative_conversion_eom !== null)
+      .slice()
+      .sort((a, b) => a.report_month.localeCompare(b.report_month))
+  }, [data])
+
+  const monthOptions = useMemo(() => meaningfulOverview.map((row) => row.report_month).reverse(), [meaningfulOverview])
+
+  const currentRow = useMemo(
+    () => meaningfulOverview.find((row) => row.report_month === selectedMonth) ?? meaningfulOverview.at(-1),
+    [meaningfulOverview, selectedMonth],
+  )
+
+  const previousRow = useMemo(() => {
+    if (!currentRow) return undefined
+    const currentIndex = meaningfulOverview.findIndex((row) => row.report_month === currentRow.report_month)
+    return currentIndex > 0 ? meaningfulOverview[currentIndex - 1] : undefined
+  }, [currentRow, meaningfulOverview])
+
+  const latestSixMonths = useMemo(() => meaningfulOverview.slice(-6), [meaningfulOverview])
+
+  const promotionsForMonth = useMemo(
+    () => data?.promotions.filter((row) => row.report_month === currentRow?.report_month) ?? [],
+    [currentRow?.report_month, data?.promotions],
+  )
+
+  const campaignsForMonth = useMemo(
+    () => data?.campaigns.filter((row) => row.report_month === currentRow?.report_month) ?? [],
+    [currentRow?.report_month, data?.campaigns],
+  )
+
+  const currentDailyActivity = useMemo(
+    () => (currentRow ? latestNonZeroDailyActivity(data?.memberDaily ?? [], currentRow.report_month) : undefined),
+    [currentRow, data?.memberDaily],
+  )
+
+  const previousDailyActivity = useMemo(
+    () => (previousRow ? latestNonZeroDailyActivity(data?.memberDaily ?? [], previousRow.report_month) : undefined),
+    [previousRow, data?.memberDaily],
+  )
+
+  const currentMau = currentRow?.active_members_eom ?? null
+  const previousMau = previousRow?.active_members_eom ?? null
+  const currentDau = currentDailyActivity?.active_members ?? null
+  const previousDau = previousDailyActivity?.active_members ?? null
+  const averageMau = currentRow ? averageDailyActivity(data?.memberDaily ?? [], currentRow.report_month) : null
+
+  const chartData = useMemo(
+    () =>
+      latestSixMonths.map((row) => ({
+        month: monthLabel(row.report_month),
+        신규회원: row.new_members ?? 0,
+        앱다운로드: row.app_downloads ?? 0,
+        포인트연계매출: row.linked_sales_amount ?? 0,
+        광고기여매출: row.ad_revenue ?? 0,
+      })),
+    [latestSixMonths],
+  )
+
+  const insightItems = useMemo(() => {
+    if (!currentRow) return []
+
+    return [
+      `${monthLabel(currentRow.report_month)} 누적 회원수는 ${formatNumber(currentRow.cumulative_conversion_eom)}명으로 ${achievementText(currentRow.cumulative_conversion_eom, MEMBER_TARGET_2026)} 상태.`,
+      `앱다운로드는 ${formatNumber(currentRow.app_downloads)}건, 연간 목표 대비 기준은 ${achievementText(currentRow.app_downloads, APP_DOWNLOAD_TARGET_2026)}.`,
+      `포인트 연계매출은 ${formatCurrency(currentRow.linked_sales_amount)}이며 광고 기여매출은 ${formatCurrency(currentRow.ad_revenue)}.`,
+      `MAU는 ${formatNumber(currentMau)}명, DAU는 ${currentDau ? `${formatNumber(currentDau)}명` : '집계 대기'}로 표시했어. DAU는 현재 raw_member_daily 최근 비영(0 제외) 집계일 기준값이야.`,
+    ]
+  }, [currentDau, currentMau, currentRow])
+
+  if (loading) {
+    return <div className="status-screen">대시보드 데이터를 불러오는 중…</div>
+  }
+
+  if (error) {
+    return (
+      <div className="status-screen status-screen--error">
+        <h1>연결 오류</h1>
+        <p>{error}</p>
+        <p>dashboard/.env.local 에 VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY를 넣어줘.</p>
+      </div>
+    )
+  }
+
+  if (!currentRow) {
+    return <div className="status-screen">표시할 데이터가 아직 없어.</div>
+  }
+
+  return (
+    <div className="dashboard-shell">
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">THEKARY POINT DASHBOARD</p>
+          <h1>월간 통합 성과 대시보드</h1>
+          <p className="subtitle">
+            회원/앱다운로드 연간 목표를 반영했고, MAU·DAU 카드도 상단에 추가했어. Google Sheets 원본 연동은 이어서 붙일 수 있게 준비해뒀어.
+          </p>
+        </div>
+
+        <div className="topbar__actions">
+          <label className="month-selector">
+            기준월
+            <select value={currentRow.report_month} onChange={(event) => setSelectedMonth(event.target.value)}>
+              {monthOptions.map((month) => (
+                <option key={month} value={month}>
+                  {monthLabel(month)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="ghost-button" type="button" onClick={() => window.location.reload()}>
+            <RefreshCw size={16} /> 새로고침
+          </button>
+          {sourceSheetUrl ? (
+            <a className="primary-button" href={sourceSheetUrl} target="_blank" rel="noreferrer">
+              원본 시트 열기
+            </a>
+          ) : (
+            <span className="hint-chip">Google Sheets 링크 연결 대기</span>
+          )}
+        </div>
+      </header>
+
+      <section className="metrics-grid metrics-grid--seven">
+        <MetricCard
+          title="회원수"
+          value={`${formatNumber(currentRow.cumulative_conversion_eom)}명`}
+          delta={summarizeChange(currentRow.cumulative_conversion_eom, previousRow?.cumulative_conversion_eom, '명')}
+          helper={`연간 목표 ${formatNumber(MEMBER_TARGET_2026)}명 · ${achievementText(currentRow.cumulative_conversion_eom, MEMBER_TARGET_2026)}`}
+          accent="slate"
+          icon={<Users size={18} />}
+        />
+        <MetricCard
+          title="앱다운로드"
+          value={`${formatNumber(currentRow.app_downloads)}건`}
+          delta={summarizeChange(currentRow.app_downloads, previousRow?.app_downloads, '건')}
+          helper={`연간 목표 ${formatNumber(APP_DOWNLOAD_TARGET_2026)}건 · ${achievementText(currentRow.app_downloads, APP_DOWNLOAD_TARGET_2026)}`}
+          accent="amber"
+          icon={<Download size={18} />}
+        />
+        <MetricCard
+          title="포인트 연계매출"
+          value={formatCurrency(currentRow.linked_sales_amount)}
+          delta={summarizeChange(currentRow.linked_sales_amount, previousRow?.linked_sales_amount, '원')}
+          helper={`포인트 사용률 ${formatRatio(currentRow.point_usage_rate)}`}
+          accent="emerald"
+          icon={<Coins size={18} />}
+        />
+        <MetricCard
+          title="광고 기여매출"
+          value={formatCurrency(currentRow.ad_revenue)}
+          delta={summarizeChange(currentRow.ad_revenue, previousRow?.ad_revenue, '원')}
+          helper={`ROAS ${currentRow.roas_markup_vat_exclusive ? `${numberFormatter.format(Math.round(currentRow.roas_markup_vat_exclusive))}%` : '-'}`}
+          accent="violet"
+          icon={<Megaphone size={18} />}
+        />
+        <MetricCard
+          title="MAU"
+          value={`${formatNumber(currentMau)}명`}
+          delta={summarizeChange(currentMau, previousMau, '명')}
+          helper={`월말 활성회원 기준 · 월중 평균 ${formatNumber(averageMau)}명`}
+          accent="sky"
+          icon={<TrendingUp size={18} />}
+        />
+        <MetricCard
+          title="DAU"
+          value={currentDau ? `${formatNumber(currentDau)}명` : '집계 대기'}
+          delta={summarizeChange(currentDau, previousDau, '명')}
+          helper={currentDailyActivity ? `최근 집계일 ${currentDailyActivity.report_date}` : 'raw daily 기준 최신 집계 대기'}
+          accent="rose"
+          icon={<MousePointerClick size={18} />}
+        />
+        <MetricCard
+          title="수신동의수"
+          value={currentRow.sms_opt_in_members || currentRow.push_opt_in_members ? `${formatNumber((currentRow.sms_opt_in_members ?? 0) + (currentRow.push_opt_in_members ?? 0))}명` : '연동 대기'}
+          delta="Google Sheets opt-in 시트 연결 후 자동 계산"
+          helper={`SMS ${formatNumber(currentRow.sms_opt_in_members)} / PUSH ${formatNumber(currentRow.push_opt_in_members)}`}
+          accent="gray"
+          icon={<BellRing size={18} />}
+        />
+      </section>
+
+      <section className="content-grid">
+        <article className="panel panel--wide">
+          <div className="panel__header">
+            <div>
+              <p className="panel__eyebrow">최근 6개월</p>
+              <h2>핵심 지표 추이</h2>
+            </div>
+            <div className="panel__legend">
+              <span><TrendingUp size={14} /> 회원/다운로드</span>
+              <span><TrendingDown size={14} /> 매출 계열</span>
+            </div>
+          </div>
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" />
+                <YAxis yAxisId="left" tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))} />
+                <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))} />
+                <Tooltip formatter={(value) => numberFormatter.format(Number(value ?? 0))} />
+                <Legend />
+                <Line yAxisId="left" type="monotone" dataKey="신규회원" stroke="#0f172a" strokeWidth={3} dot={false} />
+                <Line yAxisId="left" type="monotone" dataKey="앱다운로드" stroke="#f59e0b" strokeWidth={3} dot={false} />
+                <Line yAxisId="right" type="monotone" dataKey="포인트연계매출" stroke="#10b981" strokeWidth={3} dot={false} />
+                <Line yAxisId="right" type="monotone" dataKey="광고기여매출" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </article>
+
+        <article className="panel">
+          <div className="panel__header">
+            <div>
+              <p className="panel__eyebrow">자동 요약</p>
+              <h2>결과 인사이트</h2>
+            </div>
+          </div>
+          <ul className="insight-list">
+            {insightItems.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="panel panel--wide">
+          <div className="panel__header">
+            <div>
+              <p className="panel__eyebrow">월별 비교</p>
+              <h2>사용자 · 매출 요약 테이블</h2>
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>월</th>
+                  <th>누적 회원수</th>
+                  <th>신규회원</th>
+                  <th>앱다운로드</th>
+                  <th>MAU</th>
+                  <th>포인트 연계매출</th>
+                  <th>광고 기여매출</th>
+                </tr>
+              </thead>
+              <tbody>
+                {latestSixMonths.map((row) => (
+                  <tr key={row.report_month} className={row.report_month === currentRow.report_month ? 'is-selected' : ''}>
+                    <td>{monthLabel(row.report_month)}</td>
+                    <td>{formatNumber(row.cumulative_conversion_eom)}</td>
+                    <td>{formatNumber(row.new_members)}</td>
+                    <td>{formatNumber(row.app_downloads)}</td>
+                    <td>{formatNumber(row.active_members_eom)}</td>
+                    <td>{formatCurrency(row.linked_sales_amount)}</td>
+                    <td>{formatCurrency(row.ad_revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article className="panel">
+          <div className="panel__header">
+            <div>
+              <p className="panel__eyebrow">선택 월 프로모션</p>
+              <h2>포인트 지급 현황</h2>
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>프로모션</th>
+                  <th>지급 인원</th>
+                  <th>지급 포인트</th>
+                  <th>총 지급</th>
+                </tr>
+              </thead>
+              <tbody>
+                {promotionsForMonth.map((row) => (
+                  <tr key={`${row.report_month}-${row.promotion_type}-${row.point_amount}-${row.total_points_issued}`}>
+                    <td>{row.promotion_type}</td>
+                    <td>{formatNumber(row.participant_count)}</td>
+                    <td>{row.point_amount ? `${formatNumber(row.point_amount)}P` : '-'}</td>
+                    <td>{row.total_points_issued ? `${formatNumber(row.total_points_issued)}P` : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article className="panel panel--wide">
+          <div className="panel__header">
+            <div>
+              <p className="panel__eyebrow">광고 상세</p>
+              <h2>META 캠페인 성과</h2>
+            </div>
+          </div>
+          <div className="chart-wrap chart-wrap--compact">
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={campaignsForMonth.map((row) => ({
+                  name: row.placement_name ?? '기타',
+                  광고비: row.ad_spend_markup_vat_exclusive ?? 0,
+                  광고매출: row.revenue ?? 0,
+                }))}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))} />
+                <Tooltip formatter={(value) => currencyFormatter.format(Number(value ?? 0))} />
+                <Legend />
+                <Bar dataKey="광고비" fill="#0f172a" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="광고매출" fill="#f59e0b" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>캠페인</th>
+                  <th>광고비</th>
+                  <th>광고 기여매출</th>
+                  <th>ROAS</th>
+                  <th>CTR</th>
+                  <th>노출</th>
+                  <th>클릭</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaignsForMonth.map((row) => (
+                  <tr key={`${row.report_month}-${row.placement_name}-${row.campaign_goal}`}> 
+                    <td>{row.placement_name ?? '-'}</td>
+                    <td>{formatCurrency(row.ad_spend_markup_vat_exclusive)}</td>
+                    <td>{formatCurrency(row.revenue)}</td>
+                    <td>{row.roas_markup_vat_exclusive ? `${numberFormatter.format(Math.round(row.roas_markup_vat_exclusive))}%` : '-'}</td>
+                    <td>{formatRatio(row.ctr)}</td>
+                    <td>{formatNumber(row.impressions)}</td>
+                    <td>{formatNumber(row.clicks)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </div>
+  )
+}
+
+export default App
