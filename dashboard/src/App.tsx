@@ -324,6 +324,18 @@ function App() {
   const previousDau = previousDailyActivity?.active_members ?? null
   const averageMau = currentRow ? averageDailyActivity(data?.memberDaily ?? [], currentRow.report_month) : null
 
+  const currentIndex = currentRow
+    ? meaningfulOverview.findIndex((row) => row.report_month === currentRow.report_month)
+    : -1
+
+  const cumulativeNetMembers = currentIndex >= 0
+    ? meaningfulOverview.slice(0, currentIndex + 1).reduce((sum, row) => sum + (row.net_growth ?? 0), 0)
+    : null
+
+  const cumulativeAppDownloads = currentIndex >= 0
+    ? meaningfulOverview.slice(0, currentIndex + 1).reduce((sum, row) => sum + (row.app_downloads ?? 0), 0)
+    : null
+
   const chartData = useMemo(
     () =>
       latestSixMonths.map((row) => ({
@@ -340,12 +352,12 @@ function App() {
     if (!currentRow) return []
 
     return [
-      `${monthLabel(currentRow.report_month)} 누적 회원수는 ${formatNumber(currentRow.cumulative_conversion_eom)}명으로 ${achievementText(currentRow.cumulative_conversion_eom, MEMBER_TARGET_2026)} 상태.`,
-      `앱다운로드는 ${formatNumber(currentRow.app_downloads)}건, 연간 목표 대비 기준은 ${achievementText(currentRow.app_downloads, APP_DOWNLOAD_TARGET_2026)}.`,
+      `${monthLabel(currentRow.report_month)} 누적 가입자는 ${formatNumber(cumulativeNetMembers)}명으로 ${achievementText(cumulativeNetMembers, MEMBER_TARGET_2026)} 상태.`,
+      `앱다운로드는 ${formatNumber(currentRow.app_downloads)}건, 누적 기준은 ${achievementText(cumulativeAppDownloads, APP_DOWNLOAD_TARGET_2026)}.`,
       `포인트 연계매출은 ${formatCurrency(currentRow.linked_sales_amount)}이며 광고 기여매출은 ${formatCurrency(currentRow.ad_revenue)}.`,
       `MAU는 ${formatNumber(currentMau)}명, DAU는 ${currentDau ? `${formatNumber(currentDau)}명` : '집계 대기'}로 표시했어. DAU는 현재 raw_member_daily 최근 비영(0 제외) 집계일 기준값이야.`,
     ]
-  }, [currentDau, currentMau, currentRow])
+  }, [cumulativeAppDownloads, cumulativeNetMembers, currentDau, currentMau, currentRow])
 
   if (loading) {
     return <div className="status-screen">대시보드 데이터를 불러오는 중…</div>
@@ -402,7 +414,7 @@ function App() {
           title="회원수"
           value={`${formatNumber(currentRow.new_members)}명`}
           delta={summarizeChange(currentRow.new_members, previousRow?.new_members, '명')}
-          helper={`누적 회원수 ${achievementText(currentRow.cumulative_conversion_eom, MEMBER_TARGET_2026)}`}
+          helper={`누적 가입자 ${achievementText(cumulativeNetMembers, MEMBER_TARGET_2026)}`}
           accent="slate"
           icon={<Users size={18} />}
         />
@@ -410,7 +422,7 @@ function App() {
           title="앱다운로드"
           value={`${formatNumber(currentRow.app_downloads)}건`}
           delta={summarizeChange(currentRow.app_downloads, previousRow?.app_downloads, '건')}
-          helper={`26Y KPI · ${achievementText(currentRow.app_downloads, APP_DOWNLOAD_TARGET_2026)}`}
+          helper={`26Y KPI · ${achievementText(cumulativeAppDownloads, APP_DOWNLOAD_TARGET_2026)}`}
           accent="amber"
           icon={<Download size={18} />}
         />
