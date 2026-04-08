@@ -33,6 +33,7 @@ type MonthlyOverviewRow = {
   net_growth: number | null
   cumulative_conversion_eom: number | null
   active_members_eom: number | null
+  reported_mau: number | null
   sms_opt_in_members: number | null
   push_opt_in_members: number | null
   event_participant_count: number | null
@@ -99,11 +100,18 @@ type DailyMemberRow = {
   issue_note: string | null
 }
 
+type ActivityDailyRow = {
+  report_date: string
+  report_month: string
+  dau: number | null
+}
+
 type DashboardPayload = {
   overview: MonthlyOverviewRow[]
   promotions: PromotionRow[]
   campaigns: AdCampaignRow[]
   memberDaily: DailyMemberRow[]
+  activityDaily: ActivityDailyRow[]
 }
 
 type MetricCardProps = {
@@ -182,20 +190,11 @@ function achievementText(current: number | null | undefined, target: number) {
   return `${formatNumber(current)} / ${formatNumber(target)} (${ratioPercentFormatter.format(ratio)})`
 }
 
-function latestNonZeroDailyActivity(rows: DailyMemberRow[], reportMonth: string) {
+function latestDailyDau(rows: ActivityDailyRow[], reportMonth: string) {
   return rows
-    .filter((row) => row.report_month === reportMonth && (row.active_members ?? 0) > 0)
+    .filter((row) => row.report_month === reportMonth && row.dau !== null)
     .sort((a, b) => a.report_date.localeCompare(b.report_date))
     .at(-1)
-}
-
-function averageDailyActivity(rows: DailyMemberRow[], reportMonth: string) {
-  const values = rows
-    .filter((row) => row.report_month === reportMonth && (row.active_members ?? 0) > 0)
-    .map((row) => row.active_members ?? 0)
-
-  if (!values.length) return null
-  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
 }
 
 function MetricCard({ title, value, delta, helper, accent, icon, valueSize = 'default' }: MetricCardProps) {
@@ -217,23 +216,26 @@ async function fetchDashboardData() {
     throw new Error('Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
   }
 
-  const [overviewResult, promotionResult, campaignResult, memberDailyResult] = await Promise.all([
+  const [overviewResult, promotionResult, campaignResult, memberDailyResult, activityDailyResult] = await Promise.all([
     supabase.from('dashboard_monthly_overview').select('*').order('report_month', { ascending: false }),
     supabase.from('dashboard_promotion_breakdown').select('*').order('report_month', { ascending: false }),
     supabase.from('dashboard_ad_campaign_breakdown').select('*').order('report_month', { ascending: false }),
     supabase.from('dashboard_member_daily').select('*').order('report_date', { ascending: false }),
+    supabase.from('dashboard_activity_daily').select('*').order('report_date', { ascending: false }),
   ])
 
   if (overviewResult.error) throw overviewResult.error
   if (promotionResult.error) throw promotionResult.error
   if (campaignResult.error) throw campaignResult.error
   if (memberDailyResult.error) throw memberDailyResult.error
+  if (activityDailyResult.error) throw activityDailyResult.error
 
   return {
     overview: overviewResult.data as MonthlyOverviewRow[],
     promotions: promotionResult.data as PromotionRow[],
     campaigns: campaignResult.data as AdCampaignRow[],
     memberDaily: memberDailyResult.data as DailyMemberRow[],
+    activityDaily: activityDailyResult.data as ActivityDailyRow[],
   } satisfies DashboardPayload
 }
 
@@ -309,20 +311,19 @@ function App() {
   )
 
   const currentDailyActivity = useMemo(
-    () => (currentRow ? latestNonZeroDailyActivity(data?.memberDaily ?? [], currentRow.report_month) : undefined),
-    [currentRow, data?.memberDaily],
+    () => (currentRow ? latestDailyDau(data?.activityDaily ?? [], currentRow.report_month) : undefined),
+    [currentRow, data?.activityDaily],
   )
 
   const previousDailyActivity = useMemo(
-    () => (previousRow ? latestNonZeroDailyActivity(data?.memberDaily ?? [], previousRow.report_month) : undefined),
-    [previousRow, data?.memberDaily],
+    () => (previousRow ? latestDailyDau(data?.activityDaily ?? [], previousRow.report_month) : undefined),
+    [previousRow, data?.activityDaily],
   )
 
-  const currentMau = currentRow?.active_members_eom ?? null
-  const previousMau = previousRow?.active_members_eom ?? null
-  const currentDau = currentDailyActivity?.active_members ?? null
-  const previousDau = previousDailyActivity?.active_members ?? null
-  const averageMau = currentRow ? averageDailyActivity(data?.memberDaily ?? [], currentRow.report_month) : null
+  const currentMau = currentRow?.reported_mau ?? null
+  const previousMau = previousRow?.reported_mau ?? null
+  const currentDau = currentDailyActivity?.dau ?? null
+  const previousDau = previousDailyActivity?.dau ?? null
 
   const currentIndex = currentRow
     ? meaningfulOverview.findIndex((row) => row.report_month === currentRow.report_month)
@@ -355,7 +356,7 @@ function App() {
       `${monthLabel(currentRow.report_month)} 누적 가입자는 ${formatNumber(cumulativeNetMembers)}명으로 ${achievementText(cumulativeNetMembers, MEMBER_TARGET_2026)} 상태.`,
       `앱다운로드는 ${formatNumber(currentRow.app_downloads)}건, 누적 기준은 ${achievementText(cumulativeAppDownloads, APP_DOWNLOAD_TARGET_2026)}.`,
       `포인트 연계매출은 ${formatCurrency(currentRow.linked_sales_amount)}이며 광고 기여매출은 ${formatCurrency(currentRow.ad_revenue)}.`,
-      `MAU는 ${formatNumber(currentMau)}명, DAU는 ${currentDau ? `${formatNumber(currentDau)}명` : '집계 대기'}로 표시했어. DAU는 현재 raw_member_daily 최근 비영(0 제외) 집계일 기준값이야.`,
+      `MAU는 ${formatNumber(currentMau)}명, DAU는 ${currentDau ? `${formatNumber(currentDau)}명` : '집계 없음'}으로 표시했어. DAU는 2026-02-24부터 제공된 일별 실데이터 기준이야.`,
     ]
   }, [cumulativeAppDownloads, cumulativeNetMembers, currentDau, currentMau, currentRow])
 
@@ -446,17 +447,17 @@ function App() {
         />
         <MetricCard
           title="MAU"
-          value={`${formatNumber(currentMau)}명`}
+          value={currentMau ? `${formatNumber(currentMau)}명` : '집계 없음'}
           delta={summarizeChange(currentMau, previousMau, '명')}
-          helper={`월말 활성회원 기준 · 월중 평균 ${formatNumber(averageMau)}명`}
+          helper={currentMau ? `${monthLabel(currentRow.report_month)} 실측 MAU` : '월별 MAU 데이터 없음'}
           accent="sky"
           icon={<TrendingUp size={18} />}
         />
         <MetricCard
           title="DAU"
-          value={currentDau ? `${formatNumber(currentDau)}명` : '집계 대기'}
+          value={currentDau ? `${formatNumber(currentDau)}명` : '집계 없음'}
           delta={summarizeChange(currentDau, previousDau, '명')}
-          helper={currentDailyActivity ? `최근 집계일 ${currentDailyActivity.report_date}` : 'raw daily 기준 최신 집계 대기'}
+          helper={currentDailyActivity ? `최근 집계일 ${currentDailyActivity.report_date}` : '2026-02-24 이전 데이터 없음'}
           accent="rose"
           icon={<MousePointerClick size={18} />}
         />
@@ -552,7 +553,7 @@ function App() {
                     <td>{formatNumber(row.cumulative_conversion_eom)}</td>
                     <td>{formatNumber(row.new_members)}</td>
                     <td>{formatNumber(row.app_downloads)}</td>
-                    <td>{formatNumber(row.active_members_eom)}</td>
+                    <td>{formatNumber(row.reported_mau)}</td>
                     <td>{formatCurrency(row.linked_sales_amount)}</td>
                     <td>{formatCurrency(row.ad_revenue)}</td>
                   </tr>
