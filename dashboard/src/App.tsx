@@ -113,6 +113,7 @@ type MetricCardProps = {
   helper: string
   accent: 'amber' | 'slate' | 'emerald' | 'violet' | 'sky' | 'rose' | 'gray'
   icon: React.ReactNode
+  valueSize?: 'default' | 'compact'
 }
 
 const MEMBER_TARGET_2026 = 280_000
@@ -197,14 +198,14 @@ function averageDailyActivity(rows: DailyMemberRow[], reportMonth: string) {
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
 }
 
-function MetricCard({ title, value, delta, helper, accent, icon }: MetricCardProps) {
+function MetricCard({ title, value, delta, helper, accent, icon, valueSize = 'default' }: MetricCardProps) {
   return (
     <article className={`metric-card metric-card--${accent}`}>
       <div className="metric-card__header">
         <span className="metric-card__icon">{icon}</span>
         <span className="metric-card__title">{title}</span>
       </div>
-      <strong className="metric-card__value">{value}</strong>
+      <strong className={`metric-card__value metric-card__value--${valueSize}`}>{value}</strong>
       <p className="metric-card__delta">{delta}</p>
       <p className="metric-card__helper">{helper}</p>
     </article>
@@ -370,9 +371,6 @@ function App() {
         <div>
           <p className="eyebrow">THEKARY POINT DASHBOARD</p>
           <h1>월간 통합 성과 대시보드</h1>
-          <p className="subtitle">
-            회원/앱다운로드 연간 목표를 반영했고, MAU·DAU 카드도 상단에 추가했어. Google Sheets 원본 연동은 이어서 붙일 수 있게 준비해뒀어.
-          </p>
         </div>
 
         <div className="topbar__actions">
@@ -402,9 +400,9 @@ function App() {
       <section className="metrics-grid metrics-grid--seven">
         <MetricCard
           title="회원수"
-          value={`${formatNumber(currentRow.cumulative_conversion_eom)}명`}
-          delta={summarizeChange(currentRow.cumulative_conversion_eom, previousRow?.cumulative_conversion_eom, '명')}
-          helper={`연간 목표 ${formatNumber(MEMBER_TARGET_2026)}명 · ${achievementText(currentRow.cumulative_conversion_eom, MEMBER_TARGET_2026)}`}
+          value={`${formatNumber(currentRow.new_members)}명`}
+          delta={summarizeChange(currentRow.new_members, previousRow?.new_members, '명')}
+          helper={`누적 회원수 ${achievementText(currentRow.cumulative_conversion_eom, MEMBER_TARGET_2026)}`}
           accent="slate"
           icon={<Users size={18} />}
         />
@@ -412,7 +410,7 @@ function App() {
           title="앱다운로드"
           value={`${formatNumber(currentRow.app_downloads)}건`}
           delta={summarizeChange(currentRow.app_downloads, previousRow?.app_downloads, '건')}
-          helper={`연간 목표 ${formatNumber(APP_DOWNLOAD_TARGET_2026)}건 · ${achievementText(currentRow.app_downloads, APP_DOWNLOAD_TARGET_2026)}`}
+          helper={`26Y KPI · ${achievementText(currentRow.app_downloads, APP_DOWNLOAD_TARGET_2026)}`}
           accent="amber"
           icon={<Download size={18} />}
         />
@@ -423,6 +421,7 @@ function App() {
           helper={`포인트 사용률 ${formatRatio(currentRow.point_usage_rate)}`}
           accent="emerald"
           icon={<Coins size={18} />}
+          valueSize="compact"
         />
         <MetricCard
           title="광고 기여매출"
@@ -431,6 +430,7 @@ function App() {
           helper={`ROAS ${currentRow.roas_markup_vat_exclusive ? `${numberFormatter.format(Math.round(currentRow.roas_markup_vat_exclusive))}%` : '-'}`}
           accent="violet"
           icon={<Megaphone size={18} />}
+          valueSize="compact"
         />
         <MetricCard
           title="MAU"

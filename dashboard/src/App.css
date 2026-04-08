@@ -21,11 +21,6 @@
   color: #f59e0b;
 }
 
-.subtitle {
-  max-width: 760px;
-  color: #6b7280;
-}
-
 .topbar__actions {
   display: flex;
   align-items: center;
@@ -137,9 +132,15 @@
 }
 
 .metric-card__value {
-  font-size: 26px;
+  font-size: 24px;
   line-height: 1.2;
   letter-spacing: -0.02em;
+}
+
+.metric-card__value--compact {
+  font-size: 20px;
+  line-height: 1.25;
+  word-break: keep-all;
 }
 
 .metric-card__delta {
