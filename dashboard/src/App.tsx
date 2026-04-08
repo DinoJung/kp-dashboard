@@ -190,11 +190,26 @@ function achievementText(current: number | null | undefined, target: number) {
   return `${formatNumber(current)} / ${formatNumber(target)} (${ratioPercentFormatter.format(ratio)})`
 }
 
-function latestDailyDau(rows: ActivityDailyRow[], reportMonth: string) {
-  return rows
-    .filter((row) => row.report_month === reportMonth && row.dau !== null)
-    .sort((a, b) => a.report_date.localeCompare(b.report_date))
-    .at(-1)
+function monthlyAverageDau(rows: ActivityDailyRow[], reportMonth: string) {
+  const monthlyRows = rows.filter((row) => row.report_month === reportMonth && row.dau !== null)
+  if (!monthlyRows.length) return null
+  const sum = monthlyRows.reduce((accumulator, row) => accumulator + (row.dau ?? 0), 0)
+  return Math.round(sum / monthlyRows.length)
+}
+
+function summarizePercentChange(current: number | null | undefined, previous: number | null | undefined) {
+  if (current === null || current === undefined || previous === null || previous === undefined || previous === 0) {
+    return '전월 비교 데이터 없음'
+  }
+  const changeRate = (current - previous) / previous
+  if (changeRate === 0) return '전월과 동일 (0%)'
+  const sign = changeRate > 0 ? '+' : ''
+  return `전월 대비 ${sign}${ratioPercentFormatter.format(changeRate)}`
+}
+
+function formatRoasPercent(value: number | null | undefined) {
+  if (value === null || value === undefined) return '-'
+  return `${numberFormatter.format(Math.round(value * 100))}%`
 }
 
 function MetricCard({ title, value, delta, helper, accent, icon, valueSize = 'default' }: MetricCardProps) {
@@ -310,20 +325,18 @@ function App() {
     [currentRow?.report_month, data?.campaigns],
   )
 
-  const currentDailyActivity = useMemo(
-    () => (currentRow ? latestDailyDau(data?.activityDaily ?? [], currentRow.report_month) : undefined),
+  const currentAverageDau = useMemo(
+    () => (currentRow ? monthlyAverageDau(data?.activityDaily ?? [], currentRow.report_month) : null),
     [currentRow, data?.activityDaily],
   )
 
-  const previousDailyActivity = useMemo(
-    () => (previousRow ? latestDailyDau(data?.activityDaily ?? [], previousRow.report_month) : undefined),
+  const previousAverageDau = useMemo(
+    () => (previousRow ? monthlyAverageDau(data?.activityDaily ?? [], previousRow.report_month) : null),
     [previousRow, data?.activityDaily],
   )
 
   const currentMau = currentRow?.reported_mau ?? null
   const previousMau = previousRow?.reported_mau ?? null
-  const currentDau = currentDailyActivity?.dau ?? null
-  const previousDau = previousDailyActivity?.dau ?? null
 
   const currentIndex = currentRow
     ? meaningfulOverview.findIndex((row) => row.report_month === currentRow.report_month)
@@ -356,9 +369,9 @@ function App() {
       `${monthLabel(currentRow.report_month)} 누적 가입자는 ${formatNumber(cumulativeNetMembers)}명으로 ${achievementText(cumulativeNetMembers, MEMBER_TARGET_2026)} 상태.`,
       `앱다운로드는 ${formatNumber(currentRow.app_downloads)}건, 누적 기준은 ${achievementText(cumulativeAppDownloads, APP_DOWNLOAD_TARGET_2026)}.`,
       `포인트 연계매출은 ${formatCurrency(currentRow.linked_sales_amount)}이며 광고 기여매출은 ${formatCurrency(currentRow.ad_revenue)}.`,
-      `MAU는 ${formatNumber(currentMau)}명, DAU는 ${currentDau ? `${formatNumber(currentDau)}명` : '집계 없음'}으로 표시했어. DAU는 2026-02-24부터 제공된 일별 실데이터 기준이야.`,
+      `MAU는 ${formatNumber(currentMau)}명, DAU는 ${currentAverageDau ? `${formatNumber(currentAverageDau)}명` : '집계 없음'}으로 표시했어. DAU는 월평균 기준이며 2026-02-24부터 제공된 일별 실데이터를 사용해.`,
     ]
-  }, [cumulativeAppDownloads, cumulativeNetMembers, currentDau, currentMau, currentRow])
+  }, [cumulativeAppDownloads, cumulativeNetMembers, currentAverageDau, currentMau, currentRow])
 
   if (loading) {
     return <div className="status-screen">대시보드 데이터를 불러오는 중…</div>
@@ -430,7 +443,7 @@ function App() {
         <MetricCard
           title="포인트 연계매출"
           value={formatCurrency(currentRow.linked_sales_amount)}
-          delta={summarizeChange(currentRow.linked_sales_amount, previousRow?.linked_sales_amount, '원')}
+          delta={summarizePercentChange(currentRow.linked_sales_amount, previousRow?.linked_sales_amount)}
           helper={`포인트 사용률 ${formatRatio(currentRow.point_usage_rate)}`}
           accent="emerald"
           icon={<Coins size={18} />}
@@ -439,8 +452,8 @@ function App() {
         <MetricCard
           title="광고 기여매출"
           value={formatCurrency(currentRow.ad_revenue)}
-          delta={summarizeChange(currentRow.ad_revenue, previousRow?.ad_revenue, '원')}
-          helper={`ROAS ${currentRow.roas_markup_vat_exclusive ? `${numberFormatter.format(Math.round(currentRow.roas_markup_vat_exclusive))}%` : '-'}`}
+          delta={summarizePercentChange(currentRow.ad_revenue, previousRow?.ad_revenue)}
+          helper={`ROAS ${formatRoasPercent(currentRow.roas_markup_vat_exclusive)}`}
           accent="violet"
           icon={<Megaphone size={18} />}
           valueSize="compact"
@@ -449,15 +462,15 @@ function App() {
           title="MAU"
           value={currentMau ? `${formatNumber(currentMau)}명` : '집계 없음'}
           delta={summarizeChange(currentMau, previousMau, '명')}
-          helper={currentMau ? `${monthLabel(currentRow.report_month)} 실측 MAU` : '월별 MAU 데이터 없음'}
+          helper={currentMau ? '' : '월별 MAU 데이터 없음'}
           accent="sky"
           icon={<TrendingUp size={18} />}
         />
         <MetricCard
           title="DAU"
-          value={currentDau ? `${formatNumber(currentDau)}명` : '집계 없음'}
-          delta={summarizeChange(currentDau, previousDau, '명')}
-          helper={currentDailyActivity ? `최근 집계일 ${currentDailyActivity.report_date}` : '2026-02-24 이전 데이터 없음'}
+          value={currentAverageDau ? `${formatNumber(currentAverageDau)}명` : '집계 없음'}
+          delta={summarizeChange(currentAverageDau, previousAverageDau, '명')}
+          helper={currentAverageDau ? '월평균 기준' : '2026-02-24 이전 데이터 없음'}
           accent="rose"
           icon={<MousePointerClick size={18} />}
         />
@@ -640,7 +653,7 @@ function App() {
                     <td>{row.placement_name ?? '-'}</td>
                     <td>{formatCurrency(row.ad_spend_markup_vat_exclusive)}</td>
                     <td>{formatCurrency(row.revenue)}</td>
-                    <td>{row.roas_markup_vat_exclusive ? `${numberFormatter.format(Math.round(row.roas_markup_vat_exclusive))}%` : '-'}</td>
+                    <td>{formatRoasPercent(row.roas_markup_vat_exclusive)}</td>
                     <td>{formatRatio(row.ctr)}</td>
                     <td>{formatNumber(row.impressions)}</td>
                     <td>{formatNumber(row.clicks)}</td>
