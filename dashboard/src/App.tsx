@@ -208,8 +208,23 @@ function summarizePercentChange(current: number | null | undefined, previous: nu
 }
 
 function formatRoasPercent(value: number | null | undefined) {
-  if (value === null || value === undefined) return '-'
+  if (value === null || value === undefined || value === 0) return '-'
   return `${numberFormatter.format(Math.round(value * 100))}%`
+}
+
+function formatNullableNumber(value: number | null | undefined) {
+  if (value === null || value === undefined || value === 0) return '-'
+  return formatNumber(value)
+}
+
+function formatNullableRatio(value: number | null | undefined) {
+  if (value === null || value === undefined || value === 0) return '-'
+  return formatRatio(value)
+}
+
+function formatNullableCurrency(value: number | null | undefined) {
+  if (value === null || value === undefined || value === 0) return '-'
+  return formatCurrency(value)
 }
 
 function campaignSortRank(name: string | null | undefined, goal: string | null | undefined) {
@@ -683,12 +698,13 @@ function App() {
               <h2>포인트현황</h2>
             </div>
             <button
-              className="ghost-button ghost-button--toggle"
+              className="icon-toggle-button"
               type="button"
               onClick={() => setIsPromotionExpanded((current) => !current)}
+              aria-label={isPromotionExpanded ? 'variation 접기' : 'variation 펼치기'}
+              title={isPromotionExpanded ? 'variation 접기' : 'variation 펼치기'}
             >
-              {isPromotionExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              {isPromotionExpanded ? 'variation 접기' : 'variation 펼치기'}
+              {isPromotionExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
             </button>
           </div>
           <div className="table-wrap">
@@ -747,12 +763,12 @@ function App() {
                 {campaignsForMonth.map((row) => (
                   <tr key={`${row.report_month}-${row.placement_name}-${row.campaign_goal}`}> 
                     <td>{formatCampaignLabel(row.placement_name)}</td>
-                    <td>{formatCurrency(row.ad_spend_markup_vat_exclusive)}</td>
-                    <td>{formatCurrency(row.revenue)}</td>
+                    <td>{formatNullableCurrency(row.ad_spend_markup_vat_exclusive)}</td>
+                    <td>{formatNullableCurrency(row.revenue)}</td>
                     <td>{formatRoasPercent(row.roas_markup_vat_exclusive)}</td>
-                    <td>{formatRatio(row.ctr)}</td>
-                    <td>{formatNumber(row.impressions)}</td>
-                    <td>{formatNumber(row.clicks)}</td>
+                    <td>{formatNullableRatio(row.ctr)}</td>
+                    <td>{formatNullableNumber(row.impressions)}</td>
+                    <td>{formatNullableNumber(row.clicks)}</td>
                   </tr>
                 ))}
               </tbody>

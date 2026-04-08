@@ -80,8 +80,21 @@
   box-sizing: border-box;
 }
 
-.ghost-button--toggle {
-  white-space: nowrap;
+.icon-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.icon-toggle-button:hover {
+  color: #111827;
 }
 
 .metrics-grid {
