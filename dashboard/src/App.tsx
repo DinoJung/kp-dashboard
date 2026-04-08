@@ -603,60 +603,6 @@ function App() {
         <article className="panel panel--wide">
           <div className="panel__header">
             <div>
-              <p className="panel__eyebrow">최근 6개월</p>
-              <h2>핵심 지표 추이</h2>
-            </div>
-            <div className="panel__legend">
-              <span><TrendingUp size={14} /> 회원/다운로드</span>
-              <span><TrendingDown size={14} /> 매출 계열</span>
-            </div>
-          </div>
-          <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={chartData} margin={{ top: 8, right: 24, left: 12, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickMargin={8} />
-                <YAxis
-                  yAxisId="left"
-                  width={56}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  width={76}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))}
-                />
-                <Tooltip formatter={(value) => numberFormatter.format(Number(value ?? 0))} />
-                <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="신규회원" stroke="#0f172a" strokeWidth={3} dot={false} />
-                <Line yAxisId="left" type="monotone" dataKey="앱다운로드" stroke="#f59e0b" strokeWidth={3} dot={false} />
-                <Line yAxisId="right" type="monotone" dataKey="포인트연계매출" stroke="#10b981" strokeWidth={3} dot={false} />
-                <Line yAxisId="right" type="monotone" dataKey="광고기여매출" stroke="#8b5cf6" strokeWidth={3} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel__header">
-            <div>
-              <p className="panel__eyebrow">자동 요약</p>
-              <h2>결과 인사이트</h2>
-            </div>
-          </div>
-          <ul className="insight-list">
-            {insightItems.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </article>
-
-        <article className="panel panel--wide">
-          <div className="panel__header">
-            <div>
               <p className="panel__eyebrow">월별 비교</p>
               <h2>사용자 · 매출 요약 테이블</h2>
             </div>
@@ -666,7 +612,6 @@ function App() {
               <thead>
                 <tr>
                   <th>월</th>
-                  <th>누적 회원수</th>
                   <th>신규회원</th>
                   <th>앱다운로드</th>
                   <th>MAU</th>
@@ -675,10 +620,9 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {latestSixMonths.map((row) => (
+                {latestSixMonths.slice().reverse().map((row) => (
                   <tr key={row.report_month} className={row.report_month === currentRow.report_month ? 'is-selected' : ''}>
                     <td>{monthLabel(row.report_month)}</td>
-                    <td>{formatNumber(row.cumulative_conversion_eom)}</td>
                     <td>{formatNumber(row.new_members)}</td>
                     <td>{formatNumber(row.app_downloads)}</td>
                     <td>{formatNumber(row.reported_mau)}</td>
@@ -691,7 +635,7 @@ function App() {
           </div>
         </article>
 
-        <article className="panel">
+        <article className="panel panel--wide">
           <div className="panel__header">
             <div>
               <p className="panel__eyebrow">선택 월 프로모션</p>
@@ -784,6 +728,60 @@ function App() {
                 </tr>
               </tfoot>
             </table>
+          </div>
+        </article>
+
+        <article className="panel panel--wide">
+          <div className="panel__header">
+            <div>
+              <p className="panel__eyebrow">자동 요약</p>
+              <h2>결과 인사이트</h2>
+            </div>
+          </div>
+          <ul className="insight-list">
+            {insightItems.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="panel panel--wide">
+          <div className="panel__header">
+            <div>
+              <p className="panel__eyebrow">최근 6개월</p>
+              <h2>핵심 지표 추이</h2>
+            </div>
+            <div className="panel__legend">
+              <span><TrendingUp size={14} /> 회원/다운로드</span>
+              <span><TrendingDown size={14} /> 매출 계열</span>
+            </div>
+          </div>
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={chartData} margin={{ top: 8, right: 24, left: 12, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickMargin={8} />
+                <YAxis
+                  yAxisId="left"
+                  width={56}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  width={76}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))}
+                />
+                <Tooltip formatter={(value) => numberFormatter.format(Number(value ?? 0))} />
+                <Legend />
+                <Line yAxisId="left" type="monotone" dataKey="신규회원" stroke="#0f172a" strokeWidth={3} dot={false} />
+                <Line yAxisId="left" type="monotone" dataKey="앱다운로드" stroke="#f59e0b" strokeWidth={3} dot={false} />
+                <Line yAxisId="right" type="monotone" dataKey="포인트연계매출" stroke="#10b981" strokeWidth={3} dot={false} />
+                <Line yAxisId="right" type="monotone" dataKey="광고기여매출" stroke="#8b5cf6" strokeWidth={3} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </article>
       </section>
