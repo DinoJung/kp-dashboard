@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   BellRing,
+  ChevronDown,
+  ChevronUp,
   Coins,
   Download,
   Megaphone,
@@ -219,6 +221,13 @@ function campaignSortRank(name: string | null | undefined, goal: string | null |
   return 3
 }
 
+function formatCampaignLabel(name: string | null | undefined) {
+  const normalizedName = name?.trim() ?? ''
+  if (normalizedName.startsWith('CV_')) return '구매전환'
+  if (normalizedName.startsWith('TR_')) return '트래픽'
+  return normalizedName || '-'
+}
+
 function MetricCard({ title, value, delta, helper, accent, icon, valueSize = 'default' }: MetricCardProps) {
   return (
     <article className={`metric-card metric-card--${accent}`}>
@@ -266,6 +275,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState<string>('')
+  const [isPromotionExpanded, setIsPromotionExpanded] = useState(true)
 
   useEffect(() => {
     let active = true
@@ -332,14 +342,55 @@ function App() {
     [currentRow?.report_month, data?.promotions],
   )
 
-  const promotionDisplayRows = useMemo(
+  const expandedPromotionRows = useMemo(
     () =>
       promotionsForMonth.map((row, index) => ({
-        ...row,
+        promotion_type: row.promotion_type,
+        participant_count: row.participant_count,
+        total_points_issued: row.total_points_issued,
+        point_display: row.point_amount ? `${formatNumber(row.point_amount)}P` : '-',
         displayPromotionType: index === 0 || promotionsForMonth[index - 1]?.promotion_type !== row.promotion_type,
+        key: `${row.report_month}-${row.promotion_type}-${row.point_amount}-${row.total_points_issued}`,
       })),
     [promotionsForMonth],
   )
+
+  const collapsedPromotionRows = useMemo(() => {
+    const groupedRows = new Map<string, { promotion_type: string; participant_count: number; total_points_issued: number; min_point: number | null; max_point: number | null; key: string }>()
+
+    promotionsForMonth.forEach((row) => {
+      const existing = groupedRows.get(row.promotion_type)
+      const pointAmount = row.point_amount ?? null
+      if (existing) {
+        existing.participant_count += row.participant_count ?? 0
+        existing.total_points_issued += row.total_points_issued ?? 0
+        existing.min_point = pointAmount === null ? existing.min_point : existing.min_point === null ? pointAmount : Math.min(existing.min_point, pointAmount)
+        existing.max_point = pointAmount === null ? existing.max_point : existing.max_point === null ? pointAmount : Math.max(existing.max_point, pointAmount)
+      } else {
+        groupedRows.set(row.promotion_type, {
+          promotion_type: row.promotion_type,
+          participant_count: row.participant_count ?? 0,
+          total_points_issued: row.total_points_issued ?? 0,
+          min_point: pointAmount,
+          max_point: pointAmount,
+          key: `${row.report_month}-${row.promotion_type}`,
+        })
+      }
+    })
+
+    return Array.from(groupedRows.values()).map((row) => ({
+      ...row,
+      point_display:
+        row.min_point === null || row.max_point === null
+          ? '-'
+          : row.min_point === row.max_point
+            ? `${formatNumber(row.min_point)}P`
+            : `${formatNumber(row.min_point)} ~ ${formatNumber(row.max_point)}P`,
+      displayPromotionType: true,
+    }))
+  }, [promotionsForMonth])
+
+  const promotionTableRows = isPromotionExpanded ? expandedPromotionRows : collapsedPromotionRows
 
   const campaignsForMonth = useMemo(
     () =>
@@ -631,6 +682,14 @@ function App() {
               <p className="panel__eyebrow">선택 월 프로모션</p>
               <h2>포인트현황</h2>
             </div>
+            <button
+              className="ghost-button ghost-button--toggle"
+              type="button"
+              onClick={() => setIsPromotionExpanded((current) => !current)}
+            >
+              {isPromotionExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {isPromotionExpanded ? 'variation 접기' : 'variation 펼치기'}
+            </button>
           </div>
           <div className="table-wrap">
             <table>
@@ -643,11 +702,11 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {promotionDisplayRows.map((row) => (
-                  <tr key={`${row.report_month}-${row.promotion_type}-${row.point_amount}-${row.total_points_issued}`}>
+                {promotionTableRows.map((row) => (
+                  <tr key={row.key}>
                     <td>{row.displayPromotionType ? row.promotion_type : ''}</td>
                     <td>{formatNumber(row.participant_count)}</td>
-                    <td>{row.point_amount ? `${formatNumber(row.point_amount)}P` : '-'}</td>
+                    <td>{row.point_display}</td>
                     <td>{row.total_points_issued ? `${formatNumber(row.total_points_issued)}P` : '-'}</td>
                   </tr>
                 ))}
@@ -687,7 +746,7 @@ function App() {
               <tbody>
                 {campaignsForMonth.map((row) => (
                   <tr key={`${row.report_month}-${row.placement_name}-${row.campaign_goal}`}> 
-                    <td>{row.placement_name ?? '-'}</td>
+                    <td>{formatCampaignLabel(row.placement_name)}</td>
                     <td>{formatCurrency(row.ad_spend_markup_vat_exclusive)}</td>
                     <td>{formatCurrency(row.revenue)}</td>
                     <td>{formatRoasPercent(row.roas_markup_vat_exclusive)}</td>
