@@ -11,8 +11,6 @@ import {
   Users,
 } from 'lucide-react'
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Legend,
   Line,
@@ -212,11 +210,12 @@ function formatRoasPercent(value: number | null | undefined) {
   return `${numberFormatter.format(Math.round(value * 100))}%`
 }
 
-function campaignGoalRank(goal: string | null | undefined) {
+function campaignSortRank(name: string | null | undefined, goal: string | null | undefined) {
+  const normalizedName = name?.trim() ?? ''
   const normalizedGoal = goal?.trim() ?? ''
-  if (normalizedGoal.includes('CV')) return 0
-  if (normalizedGoal.includes('TR')) return 1
-  if (normalizedGoal.includes('전월소재')) return 2
+  if (normalizedName.includes('CV') || normalizedGoal.includes('CV')) return 0
+  if (normalizedName.includes('TR') || normalizedGoal.includes('TR')) return 1
+  if (normalizedName.includes('전월소재') || normalizedGoal.includes('전월소재')) return 2
   return 3
 }
 
@@ -323,34 +322,29 @@ function App() {
 
   const latestSixMonths = useMemo(() => meaningfulOverview.slice(-6), [meaningfulOverview])
 
-  const promotionsForMonth = useMemo(() => {
-    const monthlyRows = data?.promotions.filter((row) => row.report_month === currentRow?.report_month) ?? []
-    const groupedRows = new Map<string, PromotionRow>()
+  const promotionsForMonth = useMemo(
+    () =>
+      (data?.promotions.filter((row) => row.report_month === currentRow?.report_month) ?? []).slice().sort((a, b) => {
+        const promotionCompare = a.promotion_type.localeCompare(b.promotion_type, 'ko')
+        if (promotionCompare !== 0) return promotionCompare
+        return (a.point_amount ?? Number.MAX_SAFE_INTEGER) - (b.point_amount ?? Number.MAX_SAFE_INTEGER)
+      }),
+    [currentRow?.report_month, data?.promotions],
+  )
 
-    monthlyRows.forEach((row) => {
-      const key = `${row.promotion_type}__${row.point_amount ?? 'null'}`
-      const existing = groupedRows.get(key)
-      if (existing) {
-        existing.participant_count = (existing.participant_count ?? 0) + (row.participant_count ?? 0)
-        existing.total_points_issued = (existing.total_points_issued ?? 0) + (row.total_points_issued ?? 0)
-        existing.points_used = (existing.points_used ?? 0) + (row.points_used ?? 0)
-        existing.linked_sales_amount = (existing.linked_sales_amount ?? 0) + (row.linked_sales_amount ?? 0)
-      } else {
-        groupedRows.set(key, { ...row })
-      }
-    })
-
-    return Array.from(groupedRows.values()).sort((a, b) => {
-      const promotionCompare = a.promotion_type.localeCompare(b.promotion_type, 'ko')
-      if (promotionCompare !== 0) return promotionCompare
-      return (a.point_amount ?? Number.MAX_SAFE_INTEGER) - (b.point_amount ?? Number.MAX_SAFE_INTEGER)
-    })
-  }, [currentRow?.report_month, data?.promotions])
+  const promotionDisplayRows = useMemo(
+    () =>
+      promotionsForMonth.map((row, index) => ({
+        ...row,
+        displayPromotionType: index === 0 || promotionsForMonth[index - 1]?.promotion_type !== row.promotion_type,
+      })),
+    [promotionsForMonth],
+  )
 
   const campaignsForMonth = useMemo(
     () =>
       (data?.campaigns.filter((row) => row.report_month === currentRow?.report_month) ?? []).slice().sort((a, b) => {
-        const goalCompare = campaignGoalRank(a.campaign_goal) - campaignGoalRank(b.campaign_goal)
+        const goalCompare = campaignSortRank(a.placement_name, a.campaign_goal) - campaignSortRank(b.placement_name, b.campaign_goal)
         if (goalCompare !== 0) return goalCompare
         return (a.placement_name ?? '').localeCompare(b.placement_name ?? '', 'ko')
       }),
@@ -635,7 +629,7 @@ function App() {
           <div className="panel__header">
             <div>
               <p className="panel__eyebrow">선택 월 프로모션</p>
-              <h2>포인트 지급 현황</h2>
+              <h2>포인트현황</h2>
             </div>
           </div>
           <div className="table-wrap">
@@ -649,9 +643,9 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {promotionsForMonth.map((row) => (
+                {promotionDisplayRows.map((row) => (
                   <tr key={`${row.report_month}-${row.promotion_type}-${row.point_amount}-${row.total_points_issued}`}>
-                    <td>{row.promotion_type}</td>
+                    <td>{row.displayPromotionType ? row.promotion_type : ''}</td>
                     <td>{formatNumber(row.participant_count)}</td>
                     <td>{row.point_amount ? `${formatNumber(row.point_amount)}P` : '-'}</td>
                     <td>{row.total_points_issued ? `${formatNumber(row.total_points_issued)}P` : '-'}</td>
@@ -677,32 +671,12 @@ function App() {
               <h2>META 캠페인 성과</h2>
             </div>
           </div>
-          <div className="chart-wrap chart-wrap--compact">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart
-                data={campaignsForMonth.map((row) => ({
-                  name: row.placement_name ?? '기타',
-                  광고비: row.ad_spend_markup_vat_exclusive ?? 0,
-                  광고매출: row.revenue ?? 0,
-                }))}
-                margin={{ top: 8, right: 24, left: 12, bottom: 4 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} tickMargin={8} />
-                <YAxis width={76} tick={{ fontSize: 12 }} tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))} />
-                <Tooltip formatter={(value) => currencyFormatter.format(Number(value ?? 0))} />
-                <Legend />
-                <Bar dataKey="광고비" fill="#0f172a" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="광고매출" fill="#f59e0b" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>캠페인</th>
-                  <th>광고비</th>
+                  <th>광고비 (마크업, vat-)</th>
                   <th>광고 기여매출</th>
                   <th>ROAS</th>
                   <th>CTR</th>
