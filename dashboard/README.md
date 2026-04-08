@@ -58,13 +58,43 @@ VITE_SOURCE_SHEET_URL=https://docs.google.com/spreadsheets/d/.../edit#gid=0
 Vercel 설정 파일
 - `dashboard/vercel.json`
 
+## Google Sheets 동기화
+
+원본 시트
+- Dashboard-main
+- https://docs.google.com/spreadsheets/d/1bALRM_uxx4UbVdjIDuk8JE5-hGp1rjyy0Xuf3gHS8gQ/edit
+
+동기화 스크립트
+- `/hermes/KP_monthly-report/sync_google_sheets_to_supabase.py`
+
+사용 예시
+```bash
+cd /hermes/KP_monthly-report
+.venv/bin/python sync_google_sheets_to_supabase.py --dry-run
+.venv/bin/python sync_google_sheets_to_supabase.py
+```
+
+시트 탭 구성
+- `guide`
+- `raw_member`
+- `raw_event`
+- `raw_ad`
+- `raw_optin`
+- `daily_activity`
+- `monthly_activity`
+
+주의
+- 예시 행(example, fill when available)은 기본적으로 import에서 제외됨
+- `raw_event`, `raw_ad`는 월별 TTL 행을 포함하면 summary 재집계에 사용됨
+- `raw_optin`은 월별 SMS/PUSH 동의수를 `monthly_member_summary`에 반영함
+
 ## 다음 작업
 
-1. Google Sheets OAuth 완료
-2. 원본 시트 구조 확인
-3. 수신동의수용 시트 추가 또는 매핑
-4. Sheets -> Supabase sync 스크립트 작성
-5. 수신동의수 카드/표 실데이터 반영
+1. 실제 원본 데이터 입력
+2. dry-run으로 건수 검증
+3. 실데이터 sync 실행
+4. 수신동의수 카드/표 실데이터 반영 확인
+5. cron으로 정기 동기화 연결
 6. DAU 정의를 원본 기준으로 고도화
 
 ## 메모
