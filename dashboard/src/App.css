@@ -285,6 +285,14 @@ tbody tr.is-selected {
   background: #fff7ed;
 }
 
+tfoot td {
+  padding: 12px 14px;
+  border-top: 2px solid #e5e7eb;
+  background: #f9fafb;
+  color: #111827;
+  font-weight: 700;
+}
+
 .insight-list {
   margin: 0;
   padding-left: 18px;

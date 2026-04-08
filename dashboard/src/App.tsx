@@ -212,6 +212,14 @@ function formatRoasPercent(value: number | null | undefined) {
   return `${numberFormatter.format(Math.round(value * 100))}%`
 }
 
+function campaignGoalRank(goal: string | null | undefined) {
+  const normalizedGoal = goal?.trim() ?? ''
+  if (normalizedGoal.includes('CV')) return 0
+  if (normalizedGoal.includes('TR')) return 1
+  if (normalizedGoal.includes('전월소재')) return 2
+  return 3
+}
+
 function MetricCard({ title, value, delta, helper, accent, icon, valueSize = 'default' }: MetricCardProps) {
   return (
     <article className={`metric-card metric-card--${accent}`}>
@@ -315,15 +323,62 @@ function App() {
 
   const latestSixMonths = useMemo(() => meaningfulOverview.slice(-6), [meaningfulOverview])
 
-  const promotionsForMonth = useMemo(
-    () => data?.promotions.filter((row) => row.report_month === currentRow?.report_month) ?? [],
-    [currentRow?.report_month, data?.promotions],
-  )
+  const promotionsForMonth = useMemo(() => {
+    const monthlyRows = data?.promotions.filter((row) => row.report_month === currentRow?.report_month) ?? []
+    const groupedRows = new Map<string, PromotionRow>()
+
+    monthlyRows.forEach((row) => {
+      const key = `${row.promotion_type}__${row.point_amount ?? 'null'}`
+      const existing = groupedRows.get(key)
+      if (existing) {
+        existing.participant_count = (existing.participant_count ?? 0) + (row.participant_count ?? 0)
+        existing.total_points_issued = (existing.total_points_issued ?? 0) + (row.total_points_issued ?? 0)
+        existing.points_used = (existing.points_used ?? 0) + (row.points_used ?? 0)
+        existing.linked_sales_amount = (existing.linked_sales_amount ?? 0) + (row.linked_sales_amount ?? 0)
+      } else {
+        groupedRows.set(key, { ...row })
+      }
+    })
+
+    return Array.from(groupedRows.values()).sort((a, b) => {
+      const promotionCompare = a.promotion_type.localeCompare(b.promotion_type, 'ko')
+      if (promotionCompare !== 0) return promotionCompare
+      return (a.point_amount ?? Number.MAX_SAFE_INTEGER) - (b.point_amount ?? Number.MAX_SAFE_INTEGER)
+    })
+  }, [currentRow?.report_month, data?.promotions])
 
   const campaignsForMonth = useMemo(
-    () => data?.campaigns.filter((row) => row.report_month === currentRow?.report_month) ?? [],
+    () =>
+      (data?.campaigns.filter((row) => row.report_month === currentRow?.report_month) ?? []).slice().sort((a, b) => {
+        const goalCompare = campaignGoalRank(a.campaign_goal) - campaignGoalRank(b.campaign_goal)
+        if (goalCompare !== 0) return goalCompare
+        return (a.placement_name ?? '').localeCompare(b.placement_name ?? '', 'ko')
+      }),
     [currentRow?.report_month, data?.campaigns],
   )
+
+  const promotionTotals = useMemo(
+    () => ({
+      participantCount: promotionsForMonth.reduce((sum, row) => sum + (row.participant_count ?? 0), 0),
+      totalPointsIssued: promotionsForMonth.reduce((sum, row) => sum + (row.total_points_issued ?? 0), 0),
+    }),
+    [promotionsForMonth],
+  )
+
+  const campaignTotals = useMemo(() => {
+    const adSpend = campaignsForMonth.reduce((sum, row) => sum + (row.ad_spend_markup_vat_exclusive ?? 0), 0)
+    const revenue = campaignsForMonth.reduce((sum, row) => sum + (row.revenue ?? 0), 0)
+    const impressions = campaignsForMonth.reduce((sum, row) => sum + (row.impressions ?? 0), 0)
+    const clicks = campaignsForMonth.reduce((sum, row) => sum + (row.clicks ?? 0), 0)
+    return {
+      adSpend,
+      revenue,
+      roas: adSpend > 0 ? revenue / adSpend : null,
+      ctr: impressions > 0 ? clicks / impressions : null,
+      impressions,
+      clicks,
+    }
+  }, [campaignsForMonth])
 
   const currentAverageDau = useMemo(
     () => (currentRow ? monthlyAverageDau(data?.activityDaily ?? [], currentRow.report_month) : null),
@@ -603,6 +658,14 @@ function App() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  <td>{formatNumber(promotionTotals.participantCount)}</td>
+                  <td>-</td>
+                  <td>{`${formatNumber(promotionTotals.totalPointsIssued)}P`}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </article>
@@ -660,6 +723,17 @@ function App() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  <td>{formatCurrency(campaignTotals.adSpend)}</td>
+                  <td>{formatCurrency(campaignTotals.revenue)}</td>
+                  <td>{formatRoasPercent(campaignTotals.roas)}</td>
+                  <td>{formatRatio(campaignTotals.ctr)}</td>
+                  <td>{formatNumber(campaignTotals.impressions)}</td>
+                  <td>{formatNumber(campaignTotals.clicks)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </article>
