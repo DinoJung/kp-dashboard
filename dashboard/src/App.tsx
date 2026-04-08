@@ -472,11 +472,22 @@ function App() {
           </div>
           <div className="chart-wrap">
             <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={chartData}>
+              <LineChart data={chartData} margin={{ top: 8, right: 24, left: 12, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" />
-                <YAxis yAxisId="left" tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))} />
-                <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))} />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickMargin={8} />
+                <YAxis
+                  yAxisId="left"
+                  width={56}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  width={76}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))}
+                />
                 <Tooltip formatter={(value) => numberFormatter.format(Number(value ?? 0))} />
                 <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="신규회원" stroke="#0f172a" strokeWidth={3} dot={false} />
@@ -585,10 +596,11 @@ function App() {
                   광고비: row.ad_spend_markup_vat_exclusive ?? 0,
                   광고매출: row.revenue ?? 0,
                 }))}
+                margin={{ top: 8, right: 24, left: 12, bottom: 4 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))} />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} tickMargin={8} />
+                <YAxis width={76} tick={{ fontSize: 12 }} tickFormatter={(value) => numberFormatter.format(Number(value ?? 0))} />
                 <Tooltip formatter={(value) => currencyFormatter.format(Number(value ?? 0))} />
                 <Legend />
                 <Bar dataKey="광고비" fill="#0f172a" radius={[8, 8, 0, 0]} />

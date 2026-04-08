@@ -97,10 +97,10 @@
   color: #0f172a;
   border: 1px solid #e5e7eb;
   border-radius: 22px;
-  padding: 20px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
   overflow: hidden;
 }
@@ -137,8 +137,8 @@
 }
 
 .metric-card__value {
-  font-size: 30px;
-  line-height: 1.15;
+  font-size: 26px;
+  line-height: 1.2;
   letter-spacing: -0.02em;
 }
 
