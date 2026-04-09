@@ -30,6 +30,7 @@ import {
 } from 'recharts'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import './App.css'
+import thekaryPointLogo from '../assets/thekary-point-logo.png'
 
 type MonthlyOverviewRow = {
   report_month: string
@@ -613,7 +614,7 @@ function App() {
       setIsReportConfirmOpen(false)
       setIsSettingsOpen(false)
 
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
       const pageWidth = pdf.internal.pageSize.getWidth()
       const pageHeight = pdf.internal.pageSize.getHeight()
       const margin = 8
@@ -1005,7 +1006,9 @@ function App() {
 
       <div className="report-stage" aria-hidden="true">
         <div className="report-page report-page--cover" ref={reportPage1Ref}>
-          <div className="report-cover__logo">THEKARY POINT</div>
+          <div className="report-cover__logo-wrap">
+            <img className="report-cover__logo-image" src={thekaryPointLogo} alt="Thekary Point logo" />
+          </div>
           <div className="report-cover__content">
             <p className="report-cover__eyebrow">THEKARY POINT REPORT</p>
             <h1>더캐리포인트 {monthLabel(currentRow.report_month).slice(5).replace('-', '')}월 운영 결과 보고서</h1>
@@ -1017,22 +1020,23 @@ function App() {
         </div>
 
         <div className="report-page" ref={reportPage2Ref}>
-          <div className="report-page__header">
-            <p>THEKARY POINT REPORT</p>
-            <h2>{`${monthLabelKorean(currentRow.report_month)} 요약`}</h2>
-          </div>
-          <div className="report-summary-cards">
-            {reportMetricCards.map((item) => (
-              <article key={item.title} className="report-summary-card">
-                <span>{item.title}</span>
-                <strong>{item.value}</strong>
-              </article>
-            ))}
-          </div>
-          <div className="report-summary-grid">
-            <section className="report-panel">
-              <h3>최근 6개월 핵심 지표 추이</h3>
-              <table className="report-table report-table--compact">
+          <div className="report-page__scale report-page__scale--dashboard">
+            <div className="report-page__header">
+              <p>THEKARY POINT REPORT</p>
+              <h2>{`${monthLabelKorean(currentRow.report_month)} 요약`}</h2>
+            </div>
+            <div className="report-summary-cards">
+              {reportMetricCards.map((item) => (
+                <article key={item.title} className="report-summary-card">
+                  <span>{item.title}</span>
+                  <strong>{item.value}</strong>
+                </article>
+              ))}
+            </div>
+            <div className="report-summary-grid">
+              <section className="report-panel">
+                <h3>최근 6개월 핵심 지표 추이</h3>
+                <table className="report-table report-table--compact">
                 <thead>
                   <tr>
                     <th>월</th>
@@ -1095,6 +1099,7 @@ function App() {
                 </tfoot>
               </table>
             </section>
+          </div>
           </div>
         </div>
 

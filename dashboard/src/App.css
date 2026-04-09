@@ -488,36 +488,44 @@ tfoot td {
 }
 
 .report-page {
-  width: 794px;
-  min-height: 1123px;
+  width: 1123px;
+  min-height: 794px;
   background: #fff;
   color: #111827;
-  padding: 56px;
+  padding: 44px 48px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   font-family: Pretendard Variable, Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .report-page--cover {
   justify-content: space-between;
-  background: linear-gradient(180deg, #111827 0%, #1f2937 100%);
-  color: #fff;
+  background: #fff;
+  color: #111827;
 }
 
-.report-cover__logo {
+.report-page__scale {
+  width: calc(100% / 0.9);
+  transform: scale(0.9);
+  transform-origin: top left;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.report-cover__logo-wrap {
   align-self: flex-end;
-  min-width: 180px;
   min-height: 64px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+}
+
+.report-cover__logo-image {
+  width: 188px;
+  height: auto;
+  object-fit: contain;
 }
 
 .report-cover__content {
