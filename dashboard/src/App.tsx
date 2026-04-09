@@ -531,8 +531,7 @@ function App() {
             <Lock size={20} />
           </div>
           <p className="eyebrow">THEKARY POINT DASHBOARD</p>
-          <h1>비밀번호를 입력해줘</h1>
-          <p className="auth-card__description">대시보드 확인용 간단 보호 화면이야.</p>
+          <h1>암호를 입력해주세요.</h1>
           <input
             className="auth-card__input"
             type="password"
@@ -545,7 +544,7 @@ function App() {
           />
           {passwordError ? <p className="auth-card__error">{passwordError}</p> : null}
           <button className="primary-button auth-card__button" type="submit">
-            입장하기
+            확인
           </button>
         </form>
       </div>
