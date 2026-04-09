@@ -378,6 +378,30 @@ function App() {
 
   const latestSixMonths = useMemo(() => meaningfulOverview.slice(-6), [meaningfulOverview])
 
+  const optInOverview = useMemo(() => {
+    if (!data) return []
+    return data.overview
+      .filter((row) => row.sms_opt_in_members !== null || row.push_opt_in_members !== null)
+      .slice()
+      .sort((a, b) => a.report_month.localeCompare(b.report_month))
+  }, [data])
+
+  const currentOptInRow = useMemo(() => optInOverview.at(-1), [optInOverview])
+
+  const currentOptInCount = useMemo(() => {
+    if (!currentOptInRow) return null
+    return currentOptInRow.push_opt_in_members ?? currentOptInRow.sms_opt_in_members
+  }, [currentOptInRow])
+
+  const cumulativeOptInCount = useMemo(
+    () =>
+      optInOverview.reduce((sum, row) => {
+        const monthlyValue = row.push_opt_in_members ?? row.sms_opt_in_members ?? 0
+        return sum + monthlyValue
+      }, 0),
+    [optInOverview],
+  )
+
   const promotionsForMonth = useMemo(
     () =>
       (data?.promotions.filter((row) => row.report_month === currentRow?.report_month) ?? []).slice().sort((a, b) => {
@@ -654,9 +678,9 @@ function App() {
         />
         <MetricCard
           title="수신동의수"
-          value={currentRow.push_opt_in_members !== null ? `${formatNumber(currentRow.push_opt_in_members)}명` : currentRow.sms_opt_in_members !== null ? `${formatNumber(currentRow.sms_opt_in_members)}명` : '연동 대기'}
+          value={currentOptInCount !== null ? `${formatNumber(currentOptInCount)}건` : '연동 대기'}
           delta="해당월 건수"
-          helper="누적 0건"
+          helper={`누적 ${formatNumber(cumulativeOptInCount)}건`}
           accent="gray"
           icon={<BellRing size={18} />}
         />

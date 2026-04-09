@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import calendar
 import json
 import subprocess
 from collections import defaultdict
@@ -74,6 +75,15 @@ def parse_date(value: str | None) -> date | None:
             return parsed.replace(day=1) if fmt in {'%Y-%m', '%Y.%m', '%Y/%m'} else parsed
         except ValueError:
             continue
+
+    normalized = value.replace('.', '-').replace('/', '-')
+    parts = normalized.split('-')
+    if len(parts) == 3 and all(part.isdigit() for part in parts):
+        year, month, day = map(int, parts)
+        if 1 <= month <= 12:
+            last_day = calendar.monthrange(year, month)[1]
+            clamped_day = min(max(day, 1), last_day)
+            return date(year, month, clamped_day)
     return None
 
 
@@ -149,14 +159,22 @@ def build_payloads(spreadsheet_id: str) -> dict[str, Any]:
 
     optin_by_month: dict[date, dict[str, int | None]] = {}
     for row in raw_optin_rows:
-        report_month = parse_date(row.get('report_month'))
-        if not report_month:
+        report_date = parse_date(row.get('report_month'))
+        if not report_date:
             continue
-        optin_by_month[month_start(report_month)] = {
-            'report_month': month_start(report_month),
-            'sms_opt_in_members': to_int(row.get('sms_opt_in_members')),
-            'push_opt_in_members': to_int(row.get('push_opt_in_members')),
-        }
+        report_month = month_start(report_date)
+        existing = optin_by_month.get(report_month)
+        sms_value = to_int(row.get('sms_opt_in_members'))
+        push_value = to_int(row.get('push_opt_in_members'))
+        if existing:
+            existing['sms_opt_in_members'] = (existing['sms_opt_in_members'] or 0) + (sms_value or 0)
+            existing['push_opt_in_members'] = (existing['push_opt_in_members'] or 0) + (push_value or 0)
+        else:
+            optin_by_month[report_month] = {
+                'report_month': report_month,
+                'sms_opt_in_members': sms_value,
+                'push_opt_in_members': push_value,
+            }
 
     monthly_member: dict[date, dict[str, Any]] = {}
     for report_month, items in sorted(by_month_member.items()):
@@ -171,6 +189,21 @@ def build_payloads(spreadsheet_id: str) -> dict[str, Any]:
             'net_growth': sum(row['net_growth'] or 0 for row in ordered),
             'cumulative_conversion_eom': eom_row['cumulative_conversion'],
             'active_members_eom': eom_row['active_members'],
+            'sms_opt_in_members': optin_row.get('sms_opt_in_members'),
+            'push_opt_in_members': optin_row.get('push_opt_in_members'),
+        }
+
+    for report_month, optin_row in sorted(optin_by_month.items()):
+        if report_month in monthly_member:
+            continue
+        monthly_member[report_month] = {
+            'report_month': report_month,
+            'new_members': 0,
+            'app_downloads': 0,
+            'withdrawals': 0,
+            'net_growth': 0,
+            'cumulative_conversion_eom': None,
+            'active_members_eom': None,
             'sms_opt_in_members': optin_row.get('sms_opt_in_members'),
             'push_opt_in_members': optin_row.get('push_opt_in_members'),
         }
