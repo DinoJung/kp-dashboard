@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import {
   BellRing,
   ChevronDown,
   ChevronUp,
   Coins,
   Download,
+  ExternalLink,
+  FileText,
   Lock,
   Megaphone,
   MousePointerClick,
   RefreshCw,
+  Settings,
   TrendingDown,
   TrendingUp,
   Users,
@@ -152,6 +157,19 @@ function monthLabel(value: string) {
   return value.slice(0, 7)
 }
 
+function monthLabelKorean(value: string) {
+  const [year, month] = value.split('-')
+  return `${year}년 ${Number(month)}월`
+}
+
+function monthEndLabel(value: string) {
+  const [yearText, monthText] = value.split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const lastDay = new Date(year, month, 0).getDate()
+  return `${year}.${String(month).padStart(2, '0')}.${String(lastDay).padStart(2, '0')}`
+}
+
 function formatNumber(value: number | null | undefined) {
   if (value === null || value === undefined) return '-'
   return numberFormatter.format(value)
@@ -254,8 +272,8 @@ function MetricCard({ title, value, delta, helper, accent, icon, valueSize = 'de
         <span className="metric-card__title">{title}</span>
       </div>
       <strong className={`metric-card__value metric-card__value--${valueSize}`}>{value}</strong>
-      <p className="metric-card__delta">{delta}</p>
-      <p className="metric-card__helper">{helper}</p>
+      {delta ? <p className="metric-card__delta">{delta}</p> : null}
+      {helper ? <p className="metric-card__helper">{helper}</p> : null}
     </article>
   )
 }
@@ -298,6 +316,14 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false)
   const [passwordInput, setPasswordInput] = useState('')
   const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isReportConfirmOpen, setIsReportConfirmOpen] = useState(false)
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+  const reportPage1Ref = useRef<HTMLDivElement | null>(null)
+  const reportPage2Ref = useRef<HTMLDivElement | null>(null)
+  const reportPage3Ref = useRef<HTMLDivElement | null>(null)
+  const reportPage4Ref = useRef<HTMLDivElement | null>(null)
+  const reportPage5Ref = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const savedAuth = window.sessionStorage.getItem(DASHBOARD_AUTH_KEY)
@@ -556,6 +582,58 @@ function App() {
     ]
   }, [cumulativeAppDownloads, cumulativeNetMembers, currentAverageDau, currentMau, currentRow])
 
+  const reportMetricCards = useMemo(
+    () => [
+      { title: '회원수', value: `${formatNumber(currentRow?.new_members)}명` },
+      { title: '앱다운로드', value: `${formatNumber(currentRow?.app_downloads)}건` },
+      { title: '수신동의수', value: currentOptInCount !== null ? `${formatNumber(currentOptInCount)}건` : '연동 대기' },
+      { title: '포인트 연계매출', value: formatCurrency(currentRow?.linked_sales_amount) },
+      { title: '광고 기여매출', value: formatCurrency(currentRow?.ad_revenue) },
+      { title: 'MAU', value: currentMau ? `${formatNumber(currentMau)}명` : '집계 없음' },
+      { title: 'DAU', value: currentAverageDau ? `${formatNumber(currentAverageDau)}명` : '집계 없음' },
+    ],
+    [currentAverageDau, currentMau, currentOptInCount, currentRow],
+  )
+
+  async function captureReportPage(element: HTMLDivElement | null) {
+    if (!element) throw new Error('리포트 페이지를 찾을 수 없습니다.')
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+    })
+    return canvas.toDataURL('image/png')
+  }
+
+  async function handleGenerateReport() {
+    if (!currentRow || isGeneratingReport) return
+
+    try {
+      setIsGeneratingReport(true)
+      setIsReportConfirmOpen(false)
+      setIsSettingsOpen(false)
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const margin = 8
+      const refs = [reportPage1Ref, reportPage2Ref, reportPage3Ref, reportPage4Ref, reportPage5Ref]
+
+      for (const [index, ref] of refs.entries()) {
+        const imageData = await captureReportPage(ref.current)
+        if (index > 0) pdf.addPage()
+        pdf.addImage(imageData, 'PNG', margin, margin, pageWidth - margin * 2, pageHeight - margin * 2)
+      }
+
+      pdf.save(`thekary-point-report-${monthLabel(currentRow.report_month)}.pdf`)
+    } catch (reportError) {
+      const message = reportError instanceof Error ? reportError.message : '리포트 생성 중 오류가 발생했습니다.'
+      window.alert(message)
+    } finally {
+      setIsGeneratingReport(false)
+    }
+  }
+
   if (!authChecked) {
     return <div className="status-screen">접근 상태를 확인하는 중…</div>
   }
@@ -628,13 +706,32 @@ function App() {
           <button className="ghost-button" type="button" onClick={() => window.location.reload()}>
             <RefreshCw size={16} /> 새로고침
           </button>
-          {sourceSheetUrl ? (
-            <a className="primary-button" href={sourceSheetUrl} target="_blank" rel="noreferrer">
-              원본 시트 열기
-            </a>
-          ) : (
-            <span className="hint-chip">Google Sheets 링크 연결 대기</span>
-          )}
+          <div className="settings-menu">
+            <button
+              className="ghost-button settings-menu__trigger"
+              type="button"
+              onClick={() => setIsSettingsOpen((current) => !current)}
+              aria-label="대시보드 메뉴 열기"
+            >
+              <Settings size={16} />
+            </button>
+            {isSettingsOpen ? (
+              <div className="settings-menu__panel">
+                {sourceSheetUrl ? (
+                  <a className="settings-menu__item" href={sourceSheetUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink size={16} /> 원본 시트 열기
+                  </a>
+                ) : (
+                  <span className="settings-menu__item settings-menu__item--disabled">
+                    <ExternalLink size={16} /> 원본 시트 열기
+                  </span>
+                )}
+                <button className="settings-menu__item" type="button" onClick={() => setIsReportConfirmOpen(true)}>
+                  <FileText size={16} /> {isGeneratingReport ? '리포트 생성 중…' : '리포트 만들기'}
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -888,6 +985,129 @@ function App() {
           </div>
         </article>
       </section>
+
+      {isReportConfirmOpen ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setIsReportConfirmOpen(false)}>
+          <div className="confirm-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <h2>리포트 만들기</h2>
+            <p>{`${monthLabelKorean(currentRow.report_month)} 기준 리포트를 생성합니다.`}</p>
+            <div className="confirm-modal__actions">
+              <button className="ghost-button" type="button" onClick={() => setIsReportConfirmOpen(false)}>
+                취소
+              </button>
+              <button className="primary-button" type="button" onClick={() => void handleGenerateReport()}>
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="report-stage" aria-hidden="true">
+        <div className="report-page report-page--cover" ref={reportPage1Ref}>
+          <div className="report-cover__logo">THEKARY POINT</div>
+          <div className="report-cover__content">
+            <p className="report-cover__eyebrow">THEKARY POINT REPORT</p>
+            <h1>더캐리포인트 {monthLabel(currentRow.report_month).slice(5).replace('-', '')}월 운영 결과 보고서</h1>
+            <div className="report-cover__meta">
+              <span>마케팅 2팀</span>
+              <span>{monthEndLabel(currentRow.report_month)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="report-page" ref={reportPage2Ref}>
+          <div className="report-page__header">
+            <p>THEKARY POINT REPORT</p>
+            <h2>{`${monthLabelKorean(currentRow.report_month)} 요약`}</h2>
+          </div>
+          <div className="report-summary-cards">
+            {reportMetricCards.map((item) => (
+              <article key={item.title} className="report-summary-card">
+                <span>{item.title}</span>
+                <strong>{item.value}</strong>
+              </article>
+            ))}
+          </div>
+          <div className="report-summary-grid">
+            <section className="report-panel">
+              <h3>최근 6개월 핵심 지표 추이</h3>
+              <table className="report-table report-table--compact">
+                <thead>
+                  <tr>
+                    <th>월</th>
+                    <th>회원수</th>
+                    <th>앱다운로드</th>
+                    <th>수신동의수</th>
+                    <th>포인트 연계매출</th>
+                    <th>광고 기여매출</th>
+                    <th>MAU</th>
+                    <th>DAU</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sixMonthRows.slice().reverse().map((row) => (
+                    <tr key={`report-${row.report_month}`}>
+                      <td>{monthLabel(row.report_month)}</td>
+                      <td>{formatNumber(row.new_members)}</td>
+                      <td>{formatNumber(row.app_downloads)}</td>
+                      <td>{formatNumber(row.opt_in_count)}</td>
+                      <td>{formatCurrency(row.linked_sales_amount)}</td>
+                      <td>{formatCurrency(row.ad_revenue)}</td>
+                      <td>{formatNumber(row.reported_mau)}</td>
+                      <td>{formatNumber(row.average_dau)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+            <section className="report-panel">
+              <div className="report-panel__header">
+                <h3>포인트현황</h3>
+                <span>variation 닫힘 기준</span>
+              </div>
+              <table className="report-table">
+                <thead>
+                  <tr>
+                    <th>프로모션</th>
+                    <th>지급 인원</th>
+                    <th>지급 포인트</th>
+                    <th>총 지급</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {collapsedPromotionRows.map((row) => (
+                    <tr key={`collapsed-${row.key}`}>
+                      <td>{row.promotion_type}</td>
+                      <td>{formatNumber(row.participant_count)}</td>
+                      <td>{row.point_display}</td>
+                      <td>{row.total_points_issued ? `${formatNumber(row.total_points_issued)}P` : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td>Total</td>
+                    <td>{formatNumber(promotionTotals.participantCount)}</td>
+                    <td>-</td>
+                    <td>{`${formatNumber(promotionTotals.totalPointsIssued)}P`}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </section>
+          </div>
+        </div>
+
+        {[reportPage3Ref, reportPage4Ref, reportPage5Ref].map((ref, index) => (
+          <div key={`placeholder-${index + 3}`} className="report-page report-page--placeholder" ref={ref}>
+            <div>
+              <p>THEKARY POINT REPORT</p>
+              <h2>{`Page ${index + 3}`}</h2>
+              <span>추가 구성 예정</span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
