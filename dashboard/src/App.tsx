@@ -30,6 +30,7 @@ import {
 } from 'recharts'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import './App.css'
+import thekaryPointLogo from '../assets/thekary-point-logo-reference.jpg'
 
 type MonthlyOverviewRow = {
   report_month: string
@@ -132,15 +133,6 @@ type MetricCardProps = {
 
 const MEMBER_TARGET_2026 = 280_000
 const APP_DOWNLOAD_TARGET_2026 = 130_000
-
-function ReportWordmark({ className = '' }: { className?: string }) {
-  return (
-    <div className={`report-wordmark ${className}`.trim()} aria-label="Thekary Point logo">
-      <span className="report-wordmark__main">T H E K A R Y</span>
-      <span className="report-wordmark__sub">P O I N T</span>
-    </div>
-  )
-}
 
 const DASHBOARD_PASSWORD = 'thekary'
 const DASHBOARD_AUTH_KEY = 'thekary-dashboard-authenticated'
@@ -1056,13 +1048,13 @@ function App() {
             </div>
           </div>
           <div className="report-cover__logo-wrap report-cover__logo-wrap--bottom">
-            <ReportWordmark className="report-wordmark--cover-bottom" />
+            <img className="report-logo-image report-logo-image--cover" src={thekaryPointLogo} alt="Thekary Point logo" />
           </div>
         </div>
 
         <div className="report-page" ref={reportPage2Ref}>
           <div className="report-page__logo-corner">
-            <ReportWordmark />
+            <img className="report-logo-image report-logo-image--corner" src={thekaryPointLogo} alt="Thekary Point logo" />
           </div>
           <div className="report-page__scale report-page__scale--dashboard">
             <div className="report-page__header">
@@ -1076,7 +1068,7 @@ function App() {
         {[reportPage3Ref, reportPage4Ref, reportPage5Ref].map((ref, index) => (
           <div key={`placeholder-${index + 3}`} className="report-page report-page--placeholder" ref={ref}>
             <div className="report-page__logo-corner">
-              <ReportWordmark />
+              <img className="report-logo-image report-logo-image--corner" src={thekaryPointLogo} alt="Thekary Point logo" />
             </div>
             <div>
               <p>THEKARY POINT REPORT</p>
