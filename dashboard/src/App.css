@@ -766,6 +766,10 @@ tfoot td {
   margin-bottom: 16px;
 }
 
+.report-panel--ad-image .report-panel__header {
+  margin-bottom: 10px;
+}
+
 .report-panel__header span {
   display: block;
   font-size: 14px;
@@ -830,12 +834,15 @@ tfoot td {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
   min-height: 0;
+  align-items: start;
 }
 
 .report-panel--ad-image,
 .report-panel--ad-empty {
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
+  align-self: start;
 }
 
 .report-ad-gallery__frame {
