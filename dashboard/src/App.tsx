@@ -703,7 +703,6 @@ function App() {
         <article className="panel panel--wide">
           <div className="panel__header">
             <div>
-              <p className="panel__eyebrow">최근 6개월</p>
               <h2>최근 6개월 핵심 지표 추이</h2>
             </div>
           </div>
