@@ -370,13 +370,20 @@ function App() {
     [meaningfulOverview, selectedMonth],
   )
 
-  const previousRow = useMemo(() => {
-    if (!currentRow) return undefined
-    const currentIndex = meaningfulOverview.findIndex((row) => row.report_month === currentRow.report_month)
-    return currentIndex > 0 ? meaningfulOverview[currentIndex - 1] : undefined
-  }, [currentRow, meaningfulOverview])
+  const currentIndex = currentRow
+    ? meaningfulOverview.findIndex((row) => row.report_month === currentRow.report_month)
+    : -1
 
-  const latestSixMonths = useMemo(() => meaningfulOverview.slice(-6), [meaningfulOverview])
+  const previousRow = useMemo(() => {
+    if (currentIndex < 1) return undefined
+    return meaningfulOverview[currentIndex - 1]
+  }, [currentIndex, meaningfulOverview])
+
+  const latestSixMonths = useMemo(() => {
+    if (currentIndex < 0) return []
+    const startIndex = Math.max(0, currentIndex - 5)
+    return meaningfulOverview.slice(startIndex, currentIndex + 1)
+  }, [currentIndex, meaningfulOverview])
 
   const optInOverview = useMemo(() => {
     if (!data) return []
@@ -402,7 +409,9 @@ function App() {
 
   const promotionsForMonth = useMemo(
     () =>
-      (data?.promotions.filter((row) => row.report_month === currentRow?.report_month) ?? []).slice().sort((a, b) => {
+      (data?.promotions.filter(
+        (row) => row.report_month === currentRow?.report_month && Boolean(row.promotion_type?.trim()),
+      ) ?? []).slice().sort((a, b) => {
         const promotionCompare = a.promotion_type.localeCompare(b.promotion_type, 'ko')
         if (promotionCompare !== 0) return promotionCompare
         return (a.point_amount ?? Number.MAX_SAFE_INTEGER) - (b.point_amount ?? Number.MAX_SAFE_INTEGER)
@@ -498,6 +507,16 @@ function App() {
     [currentRow, data?.activityDaily],
   )
 
+  const sixMonthRows = useMemo(
+    () =>
+      latestSixMonths.map((row) => ({
+        ...row,
+        opt_in_count: row.push_opt_in_members ?? row.sms_opt_in_members,
+        average_dau: monthlyAverageDau(data?.activityDaily ?? [], row.report_month),
+      })),
+    [data?.activityDaily, latestSixMonths],
+  )
+
   const previousAverageDau = useMemo(
     () => (previousRow ? monthlyAverageDau(data?.activityDaily ?? [], previousRow.report_month) : null),
     [previousRow, data?.activityDaily],
@@ -505,10 +524,6 @@ function App() {
 
   const currentMau = currentRow?.reported_mau ?? null
   const previousMau = previousRow?.reported_mau ?? null
-
-  const currentIndex = currentRow
-    ? meaningfulOverview.findIndex((row) => row.report_month === currentRow.report_month)
-    : -1
 
   const cumulativeNetMembers = currentIndex >= 0
     ? meaningfulOverview.slice(0, currentIndex + 1).reduce((sum, row) => sum + (row.net_growth ?? 0), 0)
@@ -641,6 +656,14 @@ function App() {
           icon={<Download size={18} />}
         />
         <MetricCard
+          title="수신동의수"
+          value={currentOptInCount !== null ? `${formatNumber(currentOptInCount)}건` : '연동 대기'}
+          delta={`누적 ${formatNumber(cumulativeOptInCount)}건`}
+          helper=""
+          accent="gray"
+          icon={<BellRing size={18} />}
+        />
+        <MetricCard
           title="포인트 연계매출"
           value={formatCurrency(currentRow.linked_sales_amount)}
           delta={summarizePercentChange(currentRow.linked_sales_amount, previousRow?.linked_sales_amount)}
@@ -674,22 +697,14 @@ function App() {
           accent="rose"
           icon={<MousePointerClick size={18} />}
         />
-        <MetricCard
-          title="수신동의수"
-          value={currentOptInCount !== null ? `${formatNumber(currentOptInCount)}건` : '연동 대기'}
-          delta="해당월 건수"
-          helper={`누적 ${formatNumber(cumulativeOptInCount)}건`}
-          accent="gray"
-          icon={<BellRing size={18} />}
-        />
       </section>
 
       <section className="content-grid">
         <article className="panel panel--wide">
           <div className="panel__header">
             <div>
-              <p className="panel__eyebrow">월별 비교</p>
-              <h2>사용자 · 매출 요약 테이블</h2>
+              <p className="panel__eyebrow">최근 6개월</p>
+              <h2>최근 6개월 핵심 지표 추이</h2>
             </div>
           </div>
           <div className="table-wrap">
@@ -697,22 +712,26 @@ function App() {
               <thead>
                 <tr>
                   <th>월</th>
-                  <th>신규회원</th>
+                  <th>회원수</th>
                   <th>앱다운로드</th>
-                  <th>MAU</th>
+                  <th>수신동의수</th>
                   <th>포인트 연계매출</th>
                   <th>광고 기여매출</th>
+                  <th>MAU</th>
+                  <th>DAU</th>
                 </tr>
               </thead>
               <tbody>
-                {latestSixMonths.slice().reverse().map((row) => (
+                {sixMonthRows.slice().reverse().map((row) => (
                   <tr key={row.report_month} className={row.report_month === currentRow.report_month ? 'is-selected' : ''}>
                     <td>{monthLabel(row.report_month)}</td>
                     <td>{formatNumber(row.new_members)}</td>
                     <td>{formatNumber(row.app_downloads)}</td>
-                    <td>{formatNumber(row.reported_mau)}</td>
+                    <td>{formatNumber(row.opt_in_count)}</td>
                     <td>{formatCurrency(row.linked_sales_amount)}</td>
                     <td>{formatCurrency(row.ad_revenue)}</td>
+                    <td>{formatNumber(row.reported_mau)}</td>
+                    <td>{formatNumber(row.average_dau)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -723,7 +742,7 @@ function App() {
         <article className="panel panel--wide">
           <div className="panel__header">
             <div>
-              <p className="panel__eyebrow">선택 월 프로모션</p>
+              <p className="panel__eyebrow">프로모션</p>
               <h2>포인트현황</h2>
             </div>
             <button
