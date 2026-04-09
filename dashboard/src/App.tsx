@@ -1044,9 +1044,6 @@ function App() {
 
       <div className="report-stage" aria-hidden="true">
         <div className="report-page report-page--cover" ref={reportPage1Ref}>
-          <div className="report-page__logo-corner">
-            <ReportWordmark />
-          </div>
           <div className="report-cover__center">
             <p className="report-cover__eyebrow">THEKARY POINT REPORT</p>
             <h1 className="report-cover__title">
