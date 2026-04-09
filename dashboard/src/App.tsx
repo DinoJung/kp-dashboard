@@ -5,6 +5,7 @@ import {
   ChevronUp,
   Coins,
   Download,
+  Lock,
   Megaphone,
   MousePointerClick,
   RefreshCw,
@@ -126,6 +127,8 @@ type MetricCardProps = {
 
 const MEMBER_TARGET_2026 = 280_000
 const APP_DOWNLOAD_TARGET_2026 = 130_000
+const DASHBOARD_PASSWORD = 'thekary'
+const DASHBOARD_AUTH_KEY = 'thekary-dashboard-authenticated'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
@@ -291,8 +294,24 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [isPromotionExpanded, setIsPromotionExpanded] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [passwordInput, setPasswordInput] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
 
   useEffect(() => {
+    const savedAuth = window.sessionStorage.getItem(DASHBOARD_AUTH_KEY)
+    setIsAuthenticated(savedAuth === 'true')
+    setAuthChecked(true)
+  }, [])
+
+  useEffect(() => {
+    if (!authChecked) return
+    if (!isAuthenticated) {
+      setLoading(false)
+      return
+    }
+
     let active = true
 
     async function load() {
@@ -322,7 +341,19 @@ function App() {
     return () => {
       active = false
     }
-  }, [])
+  }, [authChecked, isAuthenticated])
+
+  function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (passwordInput.trim() !== DASHBOARD_PASSWORD) {
+      setPasswordError('비밀번호가 올바르지 않습니다.')
+      return
+    }
+    window.sessionStorage.setItem(DASHBOARD_AUTH_KEY, 'true')
+    setPasswordError(null)
+    setIsAuthenticated(true)
+    setLoading(true)
+  }
 
   const meaningfulOverview = useMemo(() => {
     if (!data) return []
@@ -487,6 +518,39 @@ function App() {
       `MAU는 ${formatNumber(currentMau)}명, DAU는 ${currentAverageDau ? `${formatNumber(currentAverageDau)}명` : '집계 없음'}으로 표시했어. DAU는 월평균 기준이며 2026-02-24부터 제공된 일별 실데이터를 사용해.`,
     ]
   }, [cumulativeAppDownloads, cumulativeNetMembers, currentAverageDau, currentMau, currentRow])
+
+  if (!authChecked) {
+    return <div className="status-screen">접근 상태를 확인하는 중…</div>
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="auth-screen">
+        <form className="auth-card" onSubmit={handlePasswordSubmit}>
+          <div className="auth-card__icon">
+            <Lock size={20} />
+          </div>
+          <p className="eyebrow">THEKARY POINT DASHBOARD</p>
+          <h1>비밀번호를 입력해줘</h1>
+          <p className="auth-card__description">대시보드 확인용 간단 보호 화면이야.</p>
+          <input
+            className="auth-card__input"
+            type="password"
+            value={passwordInput}
+            onChange={(event) => {
+              setPasswordInput(event.target.value)
+              if (passwordError) setPasswordError(null)
+            }}
+            placeholder="비밀번호 입력"
+          />
+          {passwordError ? <p className="auth-card__error">{passwordError}</p> : null}
+          <button className="primary-button auth-card__button" type="submit">
+            입장하기
+          </button>
+        </form>
+      </div>
+    )
+  }
 
   if (loading) {
     return <div className="status-screen">대시보드 데이터를 불러오는 중…</div>

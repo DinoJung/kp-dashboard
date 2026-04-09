@@ -4,6 +4,62 @@
   gap: 24px;
 }
 
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(100%, 420px);
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 14px;
+}
+
+.auth-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #b45309;
+  background: #fff7ed;
+}
+
+.auth-card__description {
+  margin: 0;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.auth-card__input {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid #d1d5db;
+  padding: 0 14px;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.auth-card__error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.auth-card__button {
+  width: 100%;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
