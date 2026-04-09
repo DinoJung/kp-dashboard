@@ -620,15 +620,30 @@ tfoot td {
 
 .report-step-nav {
   display: flex;
-  gap: 18px;
+  gap: 14px;
   flex-wrap: wrap;
-  color: #9ca3af;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+}
+
+.report-step-nav__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 126px;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: 1.5px solid #d1d5db;
+  background: #d1d5db;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-sizing: border-box;
 }
 
 .report-step-nav__item.is-active {
+  border-color: #f2c14e;
+  background: #fef3c7;
   color: #111827;
 }
 
@@ -642,6 +657,14 @@ tfoot td {
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.95fr);
   gap: 24px;
   align-items: start;
+}
+
+.report-dashboard-clone__bottom > * {
+  min-width: 0;
+}
+
+.report-dashboard-clone__bottom .panel--wide {
+  grid-column: auto;
 }
 
 .report-dom-clone__metrics {
@@ -690,6 +713,10 @@ tfoot td {
 
 .report-dom-clone__panel h2 {
   font-size: 28px;
+}
+
+.report-dom-clone__panel .table-wrap {
+  overflow: visible;
 }
 
 .report-dom-clone__panel table {

@@ -316,7 +316,7 @@ function ReportStepNav({ active }: { active: (typeof REPORT_STEPS)[number]['key'
     <div className="report-step-nav" aria-label="report sections">
       {REPORT_STEPS.map((step) => (
         <span key={step.key} className={`report-step-nav__item${step.key === active ? ' is-active' : ''}`}>
-          [{step.label}]
+          {step.label}
         </span>
       ))}
     </div>
@@ -610,7 +610,8 @@ function App() {
 
   const memberKpiRatio = achievementRatio(cumulativeNetMembers, MEMBER_TARGET_2026)
   const appDownloadKpiRatio = achievementRatio(cumulativeAppDownloads, APP_DOWNLOAD_TARGET_2026)
-  const reportAdImages = currentRow ? REPORT_AD_IMAGES[currentRow.report_month] ?? [] : []
+  const reportMonthKey = currentRow ? monthLabel(currentRow.report_month) : ''
+  const reportAdImages = reportMonthKey ? REPORT_AD_IMAGES[reportMonthKey] ?? [] : []
 
   const chartData = useMemo(
     () =>
