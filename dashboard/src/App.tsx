@@ -386,21 +386,19 @@ function App() {
       .sort((a, b) => a.report_month.localeCompare(b.report_month))
   }, [data])
 
-  const currentOptInRow = useMemo(() => optInOverview.at(-1), [optInOverview])
-
   const currentOptInCount = useMemo(() => {
-    if (!currentOptInRow) return null
-    return currentOptInRow.push_opt_in_members ?? currentOptInRow.sms_opt_in_members
-  }, [currentOptInRow])
+    if (!currentRow) return null
+    return currentRow.push_opt_in_members ?? currentRow.sms_opt_in_members
+  }, [currentRow])
 
-  const cumulativeOptInCount = useMemo(
-    () =>
-      optInOverview.reduce((sum, row) => {
-        const monthlyValue = row.push_opt_in_members ?? row.sms_opt_in_members ?? 0
-        return sum + monthlyValue
-      }, 0),
-    [optInOverview],
-  )
+  const cumulativeOptInCount = useMemo(() => {
+    if (!currentRow) return 0
+    return optInOverview.reduce((sum, row) => {
+      if (row.report_month > currentRow.report_month) return sum
+      const monthlyValue = row.push_opt_in_members ?? row.sms_opt_in_members ?? 0
+      return sum + monthlyValue
+    }, 0)
+  }, [currentRow, optInOverview])
 
   const promotionsForMonth = useMemo(
     () =>

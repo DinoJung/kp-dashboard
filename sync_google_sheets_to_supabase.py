@@ -193,21 +193,6 @@ def build_payloads(spreadsheet_id: str) -> dict[str, Any]:
             'push_opt_in_members': optin_row.get('push_opt_in_members'),
         }
 
-    for report_month, optin_row in sorted(optin_by_month.items()):
-        if report_month in monthly_member:
-            continue
-        monthly_member[report_month] = {
-            'report_month': report_month,
-            'new_members': 0,
-            'app_downloads': 0,
-            'withdrawals': 0,
-            'net_growth': 0,
-            'cumulative_conversion_eom': None,
-            'active_members_eom': None,
-            'sms_opt_in_members': optin_row.get('sms_opt_in_members'),
-            'push_opt_in_members': optin_row.get('push_opt_in_members'),
-        }
-
     event_raw: list[dict[str, Any]] = []
     monthly_event_current: dict[date, dict[str, Any]] = {}
     for row in raw_event_rows:
