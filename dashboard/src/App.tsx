@@ -653,10 +653,10 @@ function App() {
           icon={<MousePointerClick size={18} />}
         />
         <MetricCard
-          title="PUSH 수신동의수"
-          value={currentRow.push_opt_in_members !== null ? `${formatNumber(currentRow.push_opt_in_members)}명` : '연동 대기'}
-          delta="Google Sheets opt-in 시트 연결 후 자동 계산"
-          helper={`SMS 수신동의 수 ${formatNumber(currentRow.sms_opt_in_members)}명`}
+          title="수신동의수"
+          value={currentRow.push_opt_in_members !== null ? `${formatNumber(currentRow.push_opt_in_members)}명` : currentRow.sms_opt_in_members !== null ? `${formatNumber(currentRow.sms_opt_in_members)}명` : '연동 대기'}
+          delta="해당월 건수"
+          helper="누적 0건"
           accent="gray"
           icon={<BellRing size={18} />}
         />
