@@ -640,10 +640,10 @@ function App() {
       syncReportSummaryDom()
       await new Promise((resolve) => window.setTimeout(resolve, 50))
 
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1920, 1080] })
       const pageWidth = pdf.internal.pageSize.getWidth()
       const pageHeight = pdf.internal.pageSize.getHeight()
-      const margin = 8
+      const margin = 0
       const refs = [reportPage1Ref, reportPage2Ref, reportPage3Ref, reportPage4Ref, reportPage5Ref]
 
       for (const [index, ref] of refs.entries()) {
