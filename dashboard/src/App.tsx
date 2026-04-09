@@ -141,6 +141,32 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 const sourceSheetUrl = import.meta.env.VITE_SOURCE_SHEET_URL as string | undefined
 
+const REPORT_STEPS = [
+  { key: 'summary', label: 'SUMMARY' },
+  { key: 'exposure', label: '노출' },
+  { key: 'ad', label: 'AD' },
+  { key: 'next-plan', label: 'NEXT PLAN' },
+] as const
+
+const REPORT_AD_IMAGES: Record<string, Array<{ label: string; src: string }>> = {
+  '2026-01': [
+    { label: '트래픽', src: '/report-ad/2026-01-traffic.jpg' },
+    { label: '구매전환', src: '/report-ad/2026-01-purchase.jpg' },
+  ],
+  '2026-02': [
+    { label: '트래픽', src: '/report-ad/2026-02-traffic.jpg' },
+    { label: '구매전환', src: '/report-ad/2026-02-purchase.jpg' },
+  ],
+  '2026-03': [
+    { label: '트래픽', src: '/report-ad/2026-03-traffic.jpg' },
+    { label: '구매전환', src: '/report-ad/2026-03-purchase.jpg' },
+  ],
+  '2026-04': [
+    { label: '트래픽', src: '/report-ad/2026-04-traffic.jpg' },
+    { label: '구매전환', src: '/report-ad/2026-04-purchase.jpg' },
+  ],
+}
+
 const supabase: SupabaseClient | null =
   supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
@@ -213,6 +239,11 @@ function achievementText(current: number | null | undefined, target: number) {
   return `${formatNumber(current)} / ${formatNumber(target)} (${ratioPercentFormatter.format(ratio)})`
 }
 
+function achievementRatio(current: number | null | undefined, target: number) {
+  if (current === null || current === undefined) return '-'
+  return ratioPercentFormatter.format(current / target)
+}
+
 function monthlyAverageDau(rows: ActivityDailyRow[], reportMonth: string) {
   const monthlyRows = rows.filter((row) => row.report_month === reportMonth && row.dau !== null)
   if (!monthlyRows.length) return null
@@ -277,6 +308,18 @@ function MetricCard({ title, value, delta, helper, accent, icon, valueSize = 'de
       {delta ? <p className="metric-card__delta">{delta}</p> : null}
       {helper ? <p className="metric-card__helper">{helper}</p> : null}
     </article>
+  )
+}
+
+function ReportStepNav({ active }: { active: (typeof REPORT_STEPS)[number]['key'] }) {
+  return (
+    <div className="report-step-nav" aria-label="report sections">
+      {REPORT_STEPS.map((step) => (
+        <span key={step.key} className={`report-step-nav__item${step.key === active ? ' is-active' : ''}`}>
+          [{step.label}]
+        </span>
+      ))}
+    </div>
   )
 }
 
@@ -565,6 +608,10 @@ function App() {
     ? meaningfulOverview.slice(0, currentIndex + 1).reduce((sum, row) => sum + (row.app_downloads ?? 0), 0)
     : null
 
+  const memberKpiRatio = achievementRatio(cumulativeNetMembers, MEMBER_TARGET_2026)
+  const appDownloadKpiRatio = achievementRatio(cumulativeAppDownloads, APP_DOWNLOAD_TARGET_2026)
+  const reportAdImages = currentRow ? REPORT_AD_IMAGES[currentRow.report_month] ?? [] : []
+
   const chartData = useMemo(
     () =>
       latestSixMonths.map((row) => ({
@@ -613,14 +660,17 @@ function App() {
     const metricsClone = metrics.cloneNode(true) as HTMLElement
     const summaryClone = summary.cloneNode(true) as HTMLElement
     const promotionClone = promotion.cloneNode(true) as HTMLElement
+    const bottomRow = document.createElement('div')
 
     metricsClone.classList.add('report-dom-clone__metrics')
-    summaryClone.classList.add('report-dom-clone__panel')
-    promotionClone.classList.add('report-dom-clone__panel')
+    summaryClone.classList.add('report-dom-clone__panel', 'report-dom-clone__panel--summary')
+    promotionClone.classList.add('report-dom-clone__panel', 'report-dom-clone__panel--promotion')
+    bottomRow.className = 'report-dashboard-clone__bottom'
 
     promotionClone.querySelectorAll('.icon-toggle-button').forEach((node) => node.remove())
 
-    mount.append(metricsClone, summaryClone, promotionClone)
+    bottomRow.append(summaryClone, promotionClone)
+    mount.append(metricsClone, bottomRow)
   }
 
   async function handleGenerateReport() {
@@ -770,16 +820,16 @@ function App() {
         <MetricCard
           title="회원수"
           value={`${formatNumber(currentRow.new_members)}명`}
-          delta={summarizeChange(currentRow.new_members, previousRow?.new_members, '명')}
-          helper={`누적 가입자 ${achievementText(cumulativeNetMembers, MEMBER_TARGET_2026)}`}
+          delta={`누적 ${formatNumber(cumulativeNetMembers)} /`}
+          helper={`26Y KPI ${formatNumber(MEMBER_TARGET_2026)} (${memberKpiRatio})`}
           accent="slate"
           icon={<Users size={18} />}
         />
         <MetricCard
           title="앱다운로드"
           value={`${formatNumber(currentRow.app_downloads)}건`}
-          delta={summarizeChange(currentRow.app_downloads, previousRow?.app_downloads, '건')}
-          helper={`26Y KPI · ${achievementText(cumulativeAppDownloads, APP_DOWNLOAD_TARGET_2026)}`}
+          delta={`누적 ${formatNumber(cumulativeAppDownloads)} /`}
+          helper={`26Y KPI ${formatNumber(APP_DOWNLOAD_TARGET_2026)} (${appDownloadKpiRatio})`}
           accent="amber"
           icon={<Download size={18} />}
         />
@@ -1060,23 +1110,132 @@ function App() {
             <div className="report-page__header">
               <p>THEKARY POINT REPORT</p>
               <h2>{`${monthLabelKorean(currentRow.report_month)} 요약`}</h2>
+              <ReportStepNav active="summary" />
             </div>
             <div className="report-dashboard-clone" ref={reportPage2ContentRef} />
           </div>
         </div>
 
-        {[reportPage3Ref, reportPage4Ref, reportPage5Ref].map((ref, index) => (
-          <div key={`placeholder-${index + 3}`} className="report-page report-page--placeholder" ref={ref}>
-            <div className="report-page__logo-corner">
-              <img className="report-logo-image report-logo-image--corner" src={thekaryPointLogo} alt="Thekary Point logo" />
-            </div>
-            <div>
+        <div className="report-page" ref={reportPage3Ref}>
+          <div className="report-page__logo-corner">
+            <img className="report-logo-image report-logo-image--corner" src={thekaryPointLogo} alt="Thekary Point logo" />
+          </div>
+          <div className="report-page__scale">
+            <div className="report-page__header">
               <p>THEKARY POINT REPORT</p>
-              <h2>{`Page ${index + 3}`}</h2>
-              <span>추가 구성 예정</span>
+              <h2>{`${monthLabelKorean(currentRow.report_month)} 노출`}</h2>
+              <ReportStepNav active="exposure" />
+            </div>
+            <div className="report-placeholder-panel report-placeholder-panel--wide">
+              <strong>노출 페이지 구성 예정</strong>
+              <p>현재는 섹션 위치 확인용 페이지야. 다음 단계에서 노출·트래픽 중심 지표와 시각화를 연결할 수 있게 자리만 먼저 잡아뒀어.</p>
             </div>
           </div>
-        ))}
+        </div>
+
+        <div className="report-page" ref={reportPage4Ref}>
+          <div className="report-page__logo-corner">
+            <img className="report-logo-image report-logo-image--corner" src={thekaryPointLogo} alt="Thekary Point logo" />
+          </div>
+          <div className="report-page__scale report-page__scale--ad">
+            <div className="report-page__header">
+              <p>THEKARY POINT REPORT</p>
+              <h2>{`${monthLabelKorean(currentRow.report_month)} AD`}</h2>
+              <ReportStepNav active="ad" />
+            </div>
+            <article className="report-panel report-panel--ad-table">
+              <div className="report-panel__header">
+                <div>
+                  <span>광고 상세</span>
+                  <h3>META 캠페인 성과</h3>
+                </div>
+              </div>
+              <div className="report-table-wrap report-table-wrap--ad">
+                <table className="report-table report-table--ad">
+                  <thead>
+                    <tr>
+                      <th>캠페인</th>
+                      <th>광고비</th>
+                      <th>광고 기여매출</th>
+                      <th>ROAS</th>
+                      <th>CTR</th>
+                      <th>노출</th>
+                      <th>클릭</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {campaignsForMonth.map((row) => (
+                      <tr key={`report-${row.report_month}-${row.placement_name}-${row.campaign_goal}`}>
+                        <td>{formatCampaignLabel(row.placement_name)}</td>
+                        <td>{formatNullableCurrency(row.ad_spend_markup_vat_exclusive)}</td>
+                        <td>{formatNullableCurrency(row.revenue)}</td>
+                        <td>{formatRoasPercent(row.roas_markup_vat_exclusive)}</td>
+                        <td>{formatNullableRatio(row.ctr)}</td>
+                        <td>{formatNullableNumber(row.impressions)}</td>
+                        <td>{formatNullableNumber(row.clicks)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>Total</td>
+                      <td>{formatCurrency(campaignTotals.adSpend)}</td>
+                      <td>{formatCurrency(campaignTotals.revenue)}</td>
+                      <td>{formatRoasPercent(campaignTotals.roas)}</td>
+                      <td>{formatRatio(campaignTotals.ctr)}</td>
+                      <td>{formatNumber(campaignTotals.impressions)}</td>
+                      <td>{formatNumber(campaignTotals.clicks)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </article>
+            <div className="report-ad-gallery">
+              {reportAdImages.length ? (
+                reportAdImages.map((image) => (
+                  <article key={image.src} className="report-panel report-panel--ad-image">
+                    <div className="report-panel__header">
+                      <div>
+                        <span>AD SOURCE</span>
+                        <h3>{image.label}</h3>
+                      </div>
+                    </div>
+                    <div className="report-ad-gallery__frame">
+                      <img src={image.src} alt={`${monthLabelKorean(currentRow.report_month)} ${image.label} 광고 이미지`} />
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <article className="report-panel report-panel--ad-empty">
+                  <div className="report-panel__header">
+                    <div>
+                      <span>AD SOURCE</span>
+                      <h3>이미지 준비 중</h3>
+                    </div>
+                  </div>
+                  <p>해당 월 AD_source 이미지를 찾지 못했어.</p>
+                </article>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="report-page" ref={reportPage5Ref}>
+          <div className="report-page__logo-corner">
+            <img className="report-logo-image report-logo-image--corner" src={thekaryPointLogo} alt="Thekary Point logo" />
+          </div>
+          <div className="report-page__scale">
+            <div className="report-page__header">
+              <p>THEKARY POINT REPORT</p>
+              <h2>{`${monthLabelKorean(currentRow.report_month)} NEXT PLAN`}</h2>
+              <ReportStepNav active="next-plan" />
+            </div>
+            <div className="report-placeholder-panel report-placeholder-panel--wide">
+              <strong>다음 액션 페이지 구성 예정</strong>
+              <p>다음 단계에서 월간 실행 계획과 개선 과제를 정리할 수 있게 자리만 먼저 잡아뒀어.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
