@@ -484,6 +484,11 @@ function App() {
   const currentMau = currentRow?.reported_mau ?? null
   const previousMau = previousRow?.reported_mau ?? null
 
+  const currentOptInAverage =
+    currentRow && (currentRow.sms_opt_in_members !== null || currentRow.push_opt_in_members !== null)
+      ? Math.round(((currentRow.sms_opt_in_members ?? 0) + (currentRow.push_opt_in_members ?? 0)) / 2)
+      : null
+
   const currentIndex = currentRow
     ? meaningfulOverview.findIndex((row) => row.report_month === currentRow.report_month)
     : -1
@@ -654,9 +659,9 @@ function App() {
         />
         <MetricCard
           title="수신동의수"
-          value={currentRow.sms_opt_in_members || currentRow.push_opt_in_members ? `${formatNumber((currentRow.sms_opt_in_members ?? 0) + (currentRow.push_opt_in_members ?? 0))}명` : '연동 대기'}
+          value={currentOptInAverage !== null ? `${formatNumber(currentOptInAverage)}명` : '연동 대기'}
           delta="Google Sheets opt-in 시트 연결 후 자동 계산"
-          helper={`SMS ${formatNumber(currentRow.sms_opt_in_members)} / PUSH ${formatNumber(currentRow.push_opt_in_members)}`}
+          helper={`SMS ${formatNumber(currentRow.sms_opt_in_members)} / PUSH ${formatNumber(currentRow.push_opt_in_members)} · 평균값 표시`}
           accent="gray"
           icon={<BellRing size={18} />}
         />
