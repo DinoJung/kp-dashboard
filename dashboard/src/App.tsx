@@ -30,7 +30,6 @@ import {
 } from 'recharts'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import './App.css'
-import thekaryPointLogo from '../assets/thekary-point-logo.png'
 
 type MonthlyOverviewRow = {
   report_month: string
@@ -133,6 +132,16 @@ type MetricCardProps = {
 
 const MEMBER_TARGET_2026 = 280_000
 const APP_DOWNLOAD_TARGET_2026 = 130_000
+
+function ReportWordmark({ className = '' }: { className?: string }) {
+  return (
+    <div className={`report-wordmark ${className}`.trim()} aria-label="Thekary Point logo">
+      <span className="report-wordmark__main">T H E K A R Y</span>
+      <span className="report-wordmark__sub">P O I N T</span>
+    </div>
+  )
+}
+
 const DASHBOARD_PASSWORD = 'thekary'
 const DASHBOARD_AUTH_KEY = 'thekary-dashboard-authenticated'
 
@@ -590,11 +599,11 @@ function App() {
   async function captureReportPage(element: HTMLDivElement | null) {
     if (!element) throw new Error('리포트 페이지를 찾을 수 없습니다.')
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale: 1.5,
       backgroundColor: '#ffffff',
       useCORS: true,
     })
-    return canvas.toDataURL('image/png')
+    return canvas.toDataURL('image/jpeg', 0.86)
   }
 
   function syncReportSummaryDom() {
@@ -649,7 +658,7 @@ function App() {
       for (const [index, ref] of refs.entries()) {
         const imageData = await captureReportPage(ref.current)
         if (index > 0) pdf.addPage()
-        pdf.addImage(imageData, 'PNG', margin, margin, pageWidth - margin * 2, pageHeight - margin * 2)
+        pdf.addImage(imageData, 'JPEG', margin, margin, pageWidth - margin * 2, pageHeight - margin * 2)
       }
 
       pdf.save(`thekary-point-report-${monthLabel(currentRow.report_month)}.pdf`)
@@ -1035,6 +1044,9 @@ function App() {
 
       <div className="report-stage" aria-hidden="true">
         <div className="report-page report-page--cover" ref={reportPage1Ref}>
+          <div className="report-page__logo-corner">
+            <ReportWordmark />
+          </div>
           <div className="report-cover__center">
             <p className="report-cover__eyebrow">THEKARY POINT REPORT</p>
             <h1 className="report-cover__title">
@@ -1047,11 +1059,14 @@ function App() {
             </div>
           </div>
           <div className="report-cover__logo-wrap report-cover__logo-wrap--bottom">
-            <img className="report-cover__logo-image" src={thekaryPointLogo} alt="Thekary Point logo" />
+            <ReportWordmark className="report-wordmark--cover-bottom" />
           </div>
         </div>
 
         <div className="report-page" ref={reportPage2Ref}>
+          <div className="report-page__logo-corner">
+            <ReportWordmark />
+          </div>
           <div className="report-page__scale report-page__scale--dashboard">
             <div className="report-page__header">
               <p>THEKARY POINT REPORT</p>
@@ -1063,6 +1078,9 @@ function App() {
 
         {[reportPage3Ref, reportPage4Ref, reportPage5Ref].map((ref, index) => (
           <div key={`placeholder-${index + 3}`} className="report-page report-page--placeholder" ref={ref}>
+            <div className="report-page__logo-corner">
+              <ReportWordmark />
+            </div>
             <div>
               <p>THEKARY POINT REPORT</p>
               <h2>{`Page ${index + 3}`}</h2>

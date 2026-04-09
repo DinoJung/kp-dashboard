@@ -488,6 +488,7 @@ tfoot td {
 }
 
 .report-page {
+  position: relative;
   width: 1920px;
   height: 1080px;
   background: #fff;
@@ -526,6 +527,12 @@ tfoot td {
   padding-top: 40px;
 }
 
+.report-page__logo-corner {
+  position: absolute;
+  top: 56px;
+  right: 72px;
+}
+
 .report-cover__logo-wrap {
   min-height: 64px;
   display: inline-flex;
@@ -534,13 +541,36 @@ tfoot td {
 
 .report-cover__logo-wrap--bottom {
   align-self: center;
-  padding-bottom: 12px;
+  padding-bottom: 28px;
 }
 
-.report-cover__logo-image {
-  width: 280px;
-  height: auto;
-  object-fit: contain;
+.report-wordmark {
+  display: inline-grid;
+  justify-items: center;
+  gap: 2px;
+  color: #111827;
+  line-height: 1;
+}
+
+.report-wordmark__main {
+  font-family: Pretendard Variable, Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  padding-left: 0.42em;
+}
+
+.report-wordmark__sub {
+  font-family: Pretendard Variable, Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.7em;
+  padding-left: 0.7em;
+}
+
+.report-wordmark--cover-bottom {
+  transform: scale(2.15);
+  transform-origin: center;
 }
 
 .report-cover__eyebrow {
