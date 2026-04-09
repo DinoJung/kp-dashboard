@@ -153,6 +153,7 @@ def build_payloads(spreadsheet_id: str) -> dict[str, Any]:
         if not report_month:
             continue
         optin_by_month[month_start(report_month)] = {
+            'report_month': month_start(report_month),
             'sms_opt_in_members': to_int(row.get('sms_opt_in_members')),
             'push_opt_in_members': to_int(row.get('push_opt_in_members')),
         }
@@ -276,6 +277,7 @@ def build_payloads(spreadsheet_id: str) -> dict[str, Any]:
     return {
         'member_raw': member_raw,
         'monthly_member': [monthly_member[key] for key in sorted(monthly_member)],
+        'monthly_optin': [optin_by_month[key] for key in sorted(optin_by_month)],
         'event_raw': event_raw,
         'monthly_event_current': [monthly_event_current[key] for key in sorted(monthly_event_current)],
         'ad_raw': ad_raw,
@@ -291,6 +293,7 @@ def print_summary(payloads: dict[str, Any], spreadsheet_id: str) -> None:
     print('RAW_MEMBER_ROWS', len(payloads['member_raw']))
     print('MONTHLY_MEMBER_ROWS', len(payloads['monthly_member']))
     print('RAW_EVENT_ROWS', len(payloads['event_raw']))
+    print('MONTHLY_OPTIN_ROWS', len(payloads['monthly_optin']))
     print('MONTHLY_EVENT_CURRENT_ROWS', len(payloads['monthly_event_current']))
     print('RAW_AD_ROWS', len(payloads['ad_raw']))
     print('MONTHLY_AD_ROWS', len(payloads['monthly_ad']))
@@ -468,6 +471,30 @@ def run_sync(spreadsheet_id: str, dry_run: bool) -> None:
                             import_batch_id,
                         )
                         for row in payloads['monthly_member']
+                    ],
+                )
+
+            if payloads['monthly_optin']:
+                cur.executemany(
+                    f'''
+                    insert into {SCHEMA}.monthly_member_summary
+                    (report_month, new_members, app_downloads, withdrawals, net_growth,
+                     cumulative_conversion_eom, active_members_eom, sms_opt_in_members, push_opt_in_members, source_import_batch_id)
+                    values (%s,0,0,0,0,null,null,%s,%s,%s)
+                    on conflict (report_month) do update set
+                      sms_opt_in_members = excluded.sms_opt_in_members,
+                      push_opt_in_members = excluded.push_opt_in_members,
+                      source_import_batch_id = excluded.source_import_batch_id,
+                      updated_at = now()
+                    ''',
+                    [
+                        (
+                            row['report_month'],
+                            row['sms_opt_in_members'],
+                            row['push_opt_in_members'],
+                            import_batch_id,
+                        )
+                        for row in payloads['monthly_optin']
                     ],
                 )
 
