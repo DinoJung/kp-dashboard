@@ -198,6 +198,40 @@ function monthEndLabel(value: string) {
   return `${year}.${String(month).padStart(2, '0')}.${String(lastDay).padStart(2, '0')}`
 }
 
+function nextMonthLabel(value: string) {
+  const [yearText, monthText] = value.split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const next = new Date(year, month, 1)
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
+}
+
+function buildMonthCalendar(value: string) {
+  const [yearText, monthText] = value.split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const firstDay = new Date(year, month - 1, 1)
+  const lastDate = new Date(year, month, 0).getDate()
+  const startWeekday = firstDay.getDay()
+  const weeks: Array<Array<number | null>> = []
+  let currentWeek = Array.from({ length: 7 }, () => null as number | null)
+
+  for (let day = 1; day <= lastDate; day += 1) {
+    const weekday = (startWeekday + day - 1) % 7
+    currentWeek[weekday] = day
+    if (weekday === 6 || day === lastDate) {
+      weeks.push(currentWeek)
+      currentWeek = Array.from({ length: 7 }, () => null as number | null)
+    }
+  }
+
+  return {
+    monthKey: value,
+    monthLabel: monthLabelKorean(value),
+    weeks,
+  }
+}
+
 function formatNumber(value: number | null | undefined) {
   if (value === null || value === undefined) return '-'
   return numberFormatter.format(value)
@@ -612,6 +646,8 @@ function App() {
   const appDownloadKpiRatio = achievementRatio(cumulativeAppDownloads, APP_DOWNLOAD_TARGET_2026)
   const reportMonthKey = currentRow ? monthLabel(currentRow.report_month) : ''
   const reportAdImages = reportMonthKey ? REPORT_AD_IMAGES[reportMonthKey] ?? [] : []
+  const nextPlanCalendar = currentRow ? buildMonthCalendar(nextMonthLabel(currentRow.report_month)) : null
+  const calendarWeekdays = ['일', '월', '화', '수', '목', '금', '토']
 
   const chartData = useMemo(
     () =>
@@ -1282,10 +1318,37 @@ function App() {
               <h2>{`${monthLabelKorean(currentRow.report_month)} NEXT PLAN`}</h2>
               <ReportStepNav active="next-plan" />
             </div>
-            <div className="report-placeholder-panel report-placeholder-panel--wide">
-              <strong>다음 액션 페이지 구성 예정</strong>
-              <p>다음 단계에서 월간 실행 계획과 개선 과제를 정리할 수 있게 자리만 먼저 잡아뒀어.</p>
-            </div>
+            <section className="report-next-plan-layout">
+              <article className="report-panel report-next-plan-calendar">
+                <div className="report-panel__header">
+                  <div>
+                    <span>다음달 일정</span>
+                    <h3>{nextPlanCalendar ? `${nextPlanCalendar.monthLabel} 캘린더` : '캘린더 준비 중'}</h3>
+                  </div>
+                </div>
+                {nextPlanCalendar ? (
+                  <div className="report-calendar">
+                    <div className="report-calendar__weekdays">
+                      {calendarWeekdays.map((weekday) => (
+                        <span key={weekday} className="report-calendar__weekday">{weekday}</span>
+                      ))}
+                    </div>
+                    <div className="report-calendar__grid">
+                      {nextPlanCalendar.weeks.flatMap((week, weekIndex) =>
+                        week.map((day, dayIndex) => (
+                          <div
+                            key={`${nextPlanCalendar.monthKey}-${weekIndex}-${dayIndex}`}
+                            className={`report-calendar__cell${day === null ? ' is-empty' : ''}`}
+                          >
+                            {day !== null ? <span className="report-calendar__date">{day}</span> : null}
+                          </div>
+                        )),
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </article>
+            </section>
           </div>
         </div>
       </div>
