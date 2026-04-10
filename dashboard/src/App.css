@@ -767,17 +767,32 @@ tfoot td {
 }
 
 .report-panel--ad-image {
-  display: grid;
-  grid-template-rows: auto 1fr;
   align-self: stretch;
-  padding: 16px 24px 24px;
+  padding: 20px 22px;
 }
 
-.report-panel--ad-image .report-panel__header {
-  margin-bottom: 4px;
+.report-panel__body--ad {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  min-height: 264px;
 }
 
-.report-panel__header span {
+.report-ad-gallery__meta {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.report-ad-gallery__meta span,
+.report-ad-gallery__meta h3 {
+  margin: 0;
+}
+
+.report-panel__header span,
+.report-ad-gallery__meta span {
   display: block;
   font-size: 14px;
   color: #f59e0b;
@@ -839,7 +854,7 @@ tfoot td {
 .report-ad-gallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
   min-height: 0;
   align-items: stretch;
 }
@@ -852,14 +867,14 @@ tfoot td {
 }
 
 .report-ad-gallery__frame {
-  height: 460px;
+  height: 264px;
   border-radius: 20px;
   overflow: hidden;
   background: #f8fafc;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 4px 10px 22px;
+  padding: 6px 8px 14px;
   box-sizing: border-box;
 }
 

@@ -1198,18 +1198,18 @@ function App() {
 
                   return (
                     <article key={image.src} className={`report-panel report-panel--ad-image report-panel--ad-image--${imageKey}`}>
-                      <div className="report-panel__header">
-                        <div>
+                      <div className="report-panel__body report-panel__body--ad">
+                        <div className="report-ad-gallery__meta">
                           <span>AD SOURCE</span>
                           <h3>{image.label}</h3>
                         </div>
-                      </div>
-                      <div className={`report-ad-gallery__frame report-ad-gallery__frame--${imageKey}`}>
-                        <img
-                          className={`report-ad-gallery__image report-ad-gallery__image--${imageKey}`}
-                          src={image.src}
-                          alt={`${monthLabelKorean(currentRow.report_month)} ${image.label} 광고 이미지`}
-                        />
+                        <div className={`report-ad-gallery__frame report-ad-gallery__frame--${imageKey}`}>
+                          <img
+                            className={`report-ad-gallery__image report-ad-gallery__image--${imageKey}`}
+                            src={image.src}
+                            alt={`${monthLabelKorean(currentRow.report_month)} ${image.label} 광고 이미지`}
+                          />
+                        </div>
                       </div>
                     </article>
                   )
