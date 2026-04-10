@@ -785,7 +785,7 @@ tfoot td {
 
 .report-page__scale--ad {
   gap: 14px;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .report-ad-focus-grid {
