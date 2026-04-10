@@ -1297,7 +1297,7 @@ function App() {
                         <div className={`report-ad-gallery__frame report-ad-gallery__frame--${imageKey}`}>
                           <div className="report-ad-gallery__pair">
                             {image.images.map((src, index) => (
-                              <div key={src} className="report-ad-gallery__slot">
+                              <div key={src} className={`report-ad-gallery__slot report-ad-gallery__slot--${index === 0 ? 'primary' : 'secondary'}`}>
                                 <img
                                   className={`report-ad-gallery__image report-ad-gallery__image--${imageKey}`}
                                   src={src}

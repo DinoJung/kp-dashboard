@@ -909,17 +909,40 @@ tfoot td {
 .report-ad-gallery__pair {
   width: 100%;
   height: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  align-items: center;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
 }
 
 .report-ad-gallery__slot {
-  height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
+}
+
+.report-ad-gallery__slot--primary {
+  width: 44%;
+  height: 100%;
+}
+
+.report-ad-gallery__slot--secondary {
+  width: 34%;
+  height: 84%;
+}
+
+.report-ad-gallery__frame--traffic .report-ad-gallery__pair {
+  gap: 12px;
+  transform: translate(-28px, -4px);
+}
+
+.report-ad-gallery__frame--traffic .report-ad-gallery__slot--primary {
+  width: 48%;
+}
+
+.report-ad-gallery__frame--traffic .report-ad-gallery__slot--secondary {
+  width: 28%;
+  height: 80%;
 }
 
 .report-ad-gallery__image {
