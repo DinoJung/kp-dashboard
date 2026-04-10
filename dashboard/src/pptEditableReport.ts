@@ -104,12 +104,12 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
 
   function addHeader(slide: PptxGenJS.Slide, title: string, activeStep: 'summary' | 'exposure' | 'ad' | 'next-plan', logoData: string) {
     slide.addText('THEKARY POINT REPORT', {
-      x: px(96), y: px(84), w: px(420), h: px(20),
-      fontFace: FONT_FACE, fontSize: 12.5, bold: true, color: ACCENT_AMBER,
+      x: px(96), y: px(84), w: px(460), h: px(20),
+      fontFace: FONT_FACE, fontSize: 10.5, bold: true, color: ACCENT_AMBER,
     })
     slide.addText(title, {
-      x: px(96), y: px(108), w: px(900), h: px(42),
-      fontFace: FONT_FACE, fontSize: 29, bold: true, color: BODY_TEXT,
+      x: px(96), y: px(108), w: px(980), h: px(42),
+      fontFace: FONT_FACE, fontSize: 24, bold: true, color: BODY_TEXT,
     })
     const navLabels = [
       { key: 'summary', label: 'SUMMARY' },
@@ -131,11 +131,11 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
       })
       slide.addText(step.label, {
         x: navX,
-        y: px(174),
+        y: px(175),
         w: width,
         h: px(18),
         fontFace: FONT_FACE,
-        fontSize: 12.5,
+        fontSize: 10.5,
         bold: true,
         align: 'center',
         color: step.key === activeStep ? BODY_TEXT : 'FFFFFF',
@@ -157,33 +157,33 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
       fill: { color: card.accent },
     })
     slide.addText(card.title, {
-      x: x + px(18), y: y + px(16), w: w - px(36), h: px(18),
-      fontFace: FONT_FACE, fontSize: compact ? 10.5 : 11, bold: true, color: BODY_TEXT,
+      x: x + px(16), y: y + px(16), w: w - px(28), h: px(18),
+      fontFace: FONT_FACE, fontSize: compact ? 8.5 : 9, bold: true, color: BODY_TEXT,
     })
     slide.addText(card.value, {
-      x: x + px(18), y: y + px(compact ? 44 : 46), w: w - px(36), h: px(28),
-      fontFace: FONT_FACE, fontSize: compact ? 16 : 18, bold: true, color: BODY_TEXT,
+      x: x + px(16), y: y + px(compact ? 42 : 44), w: w - px(28), h: px(24),
+      fontFace: FONT_FACE, fontSize: compact ? 12 : 14, bold: true, color: BODY_TEXT,
       align: compact ? 'right' : 'left',
     })
     if (card.delta) {
       slide.addText(card.delta, {
-        x: x + px(18), y: y + px(compact ? 78 : 80), w: w - px(36), h: px(16),
-        fontFace: FONT_FACE, fontSize: 9, bold: true, color: BODY_TEXT,
+        x: x + px(16), y: y + px(compact ? 74 : 76), w: w - px(28), h: px(14),
+        fontFace: FONT_FACE, fontSize: 7, bold: true, color: BODY_TEXT,
       })
     }
     if (card.helper) {
       slide.addText(card.helper, {
-        x: x + px(18), y: y + px(compact ? 96 : 100), w: w - px(36), h: px(16),
-        fontFace: FONT_FACE, fontSize: 8.5, color: MUTED_TEXT,
+        x: x + px(16), y: y + px(compact ? 90 : 94), w: w - px(28), h: px(14),
+        fontFace: FONT_FACE, fontSize: 6.5, color: MUTED_TEXT,
       })
     }
   }
 
   function addPanelTitle(slide: PptxGenJS.Slide, eyebrow: string, title: string, x: number, y: number, w: number) {
     if (eyebrow) {
-      slide.addText(eyebrow, { x, y, w, h: px(16), fontFace: FONT_FACE, fontSize: 10, bold: true, color: ACCENT_AMBER })
+      slide.addText(eyebrow, { x, y, w: w + px(24), h: px(16), fontFace: FONT_FACE, fontSize: 8, bold: true, color: ACCENT_AMBER })
     }
-    slide.addText(title, { x, y: y + px(18), w, h: px(24), fontFace: FONT_FACE, fontSize: 18, bold: true, color: BODY_TEXT })
+    slide.addText(title, { x, y: y + px(18), w: w + px(24), h: px(24), fontFace: FONT_FACE, fontSize: 14, bold: true, color: BODY_TEXT })
   }
 
   function makeTableRows(rows: TableRows, headerFill = 'F3F4F6'): any {
@@ -219,13 +219,13 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   const cover = pptx.addSlide()
   cover.background = { color: 'FFFFFF' }
   cover.addText('THEKARY POINT REPORT', {
-    x: px(520), y: px(320), w: px(880), h: px(36), fontFace: FONT_FACE, fontSize: 38, bold: true, align: 'center', color: MUTED_TEXT,
+    x: px(520), y: px(320), w: px(880), h: px(36), fontFace: FONT_FACE, fontSize: 32, bold: true, align: 'center', color: MUTED_TEXT,
   })
   cover.addText('더캐리포인트', {
-    x: px(420), y: px(430), w: px(450), h: px(60), fontFace: FONT_FACE, fontSize: 38, bold: true, align: 'right', color: '9CA3AF',
+    x: px(420), y: px(430), w: px(450), h: px(60), fontFace: FONT_FACE, fontSize: 32, bold: true, align: 'right', color: '9CA3AF',
   })
   cover.addText(args.coverTitle, {
-    x: px(890), y: px(430), w: px(650), h: px(60), fontFace: FONT_FACE, fontSize: 38, bold: true, color: ACCENT_AMBER,
+    x: px(890), y: px(430), w: px(650), h: px(60), fontFace: FONT_FACE, fontSize: 32, bold: true, color: ACCENT_AMBER,
   })
   cover.addText('마케팅 2팀', { x: px(760), y: px(560), w: px(400), h: px(22), fontFace: FONT_FACE, fontSize: 15, align: 'center', color: MUTED_TEXT })
   cover.addText(args.monthEndLabel, { x: px(760), y: px(590), w: px(400), h: px(22), fontFace: FONT_FACE, fontSize: 15, align: 'center', color: MUTED_TEXT })
@@ -248,26 +248,26 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   addPanel(result, summaryX, panelsY, summaryW, panelH)
   addPanelTitle(result, '', '최근 6개월 핵심 지표 추이', summaryX + px(26), panelsY + px(20), summaryW - px(52))
   result.addTable(makeTableRows(args.sixMonthTableRows), {
-    x: summaryX + px(22), y: panelsY + px(72), w: summaryW - px(44), h: panelH - px(92),
-    fontFace: FONT_FACE, fontSize: 8.5, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
-    fill: { color: 'FFFFFF' }, margin: 0.04, rowH: px(48), autoFit: false, align: 'center',
+    x: summaryX + px(20), y: panelsY + px(72), w: summaryW - px(36), h: panelH - px(92),
+    fontFace: FONT_FACE, fontSize: 6.5, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
+    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(48), autoFit: false, align: 'center',
   } as any)
   addPanel(result, promotionX, panelsY, promotionW, panelH)
   addPanelTitle(result, '프로모션', '포인트현황', promotionX + px(26), panelsY + px(20), promotionW - px(52))
   result.addTable(makeTableRows(args.promotionRows), {
-    x: promotionX + px(22), y: panelsY + px(72), w: promotionW - px(44), h: panelH - px(92),
-    fontFace: FONT_FACE, fontSize: 8.5, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
-    fill: { color: 'FFFFFF' }, margin: 0.04, rowH: px(44), autoFit: false, align: 'center',
+    x: promotionX + px(20), y: panelsY + px(72), w: promotionW - px(36), h: panelH - px(92),
+    fontFace: FONT_FACE, fontSize: 6.5, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
+    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(44), autoFit: false, align: 'center',
   } as any)
 
   const exposure = pptx.addSlide()
   exposure.background = { color: 'FFFFFF' }
   addHeader(exposure, `${args.monthLabelKorean} 브랜드 사이트 팝업`, 'exposure', logoData)
   exposure.addText(`더캐리포인트 가입 유도 팝업 | ${args.exposureFirstBusinessDay} 10:00`, {
-    x: px(96), y: px(228), w: px(1500), h: px(32), fontFace: FONT_FACE, fontSize: 18, bold: true, color: BODY_TEXT,
+    x: px(96), y: px(228), w: px(1560), h: px(28), fontFace: FONT_FACE, fontSize: 13.5, bold: true, color: BODY_TEXT,
   })
   exposure.addText('이벤트페이지(KP), 브랜드 홈페이지 메인홈(BP, BPU, IB, KR), 마이페이지(KR)', {
-    x: px(96), y: px(268), w: px(1520), h: px(26), fontFace: FONT_FACE, fontSize: 14, bold: true, color: '4B5563',
+    x: px(96), y: px(266), w: px(1580), h: px(22), fontFace: FONT_FACE, fontSize: 10.5, bold: true, color: '4B5563',
   })
   addPanel(exposure, px(96), px(328), px(1728), px(656), 'FFFFFF', 'D1D5DB')
 
@@ -282,19 +282,19 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   addPanel(ad, px(96), px(330), px(1728), px(310))
   addPanelTitle(ad, '광고 상세', 'META 캠페인 성과', px(122), px(350), px(400))
   ad.addTable(makeTableRows(args.campaignRows), {
-    x: px(118), y: px(400), w: px(1684), h: px(218),
-    fontFace: FONT_FACE, fontSize: 9, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
-    fill: { color: 'FFFFFF' }, margin: 0.04, rowH: px(44), autoFit: false, align: 'center',
+    x: px(114), y: px(400), w: px(1692), h: px(218),
+    fontFace: FONT_FACE, fontSize: 7, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
+    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(44), autoFit: false, align: 'center',
   } as any)
   const galleryW = px((1728 - 16) / 2)
   for (const [index, card] of args.adSourceCards.entries()) {
     const panelX = px(96) + index * (galleryW + px(16))
     addPanel(ad, panelX, px(660), galleryW, px(300))
     ad.addText('AD SOURCE', {
-      x: panelX + px(24), y: px(684), w: px(130), h: px(16), fontFace: FONT_FACE, fontSize: 10, bold: true, color: ACCENT_AMBER,
+      x: panelX + px(24), y: px(684), w: px(154), h: px(16), fontFace: FONT_FACE, fontSize: 8, bold: true, color: ACCENT_AMBER,
     })
     ad.addText(card.label, {
-      x: panelX + px(24), y: px(706), w: px(130), h: px(24), fontFace: FONT_FACE, fontSize: 18, bold: true, color: BODY_TEXT,
+      x: panelX + px(24), y: px(706), w: px(154), h: px(24), fontFace: FONT_FACE, fontSize: 14, bold: true, color: BODY_TEXT,
     })
     addPanel(ad, panelX + px(150), px(676), galleryW - px(174), px(268), PALE_GRAY, 'F1F5F9')
     const slotGap = px(12)
@@ -328,14 +328,14 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
       const x = boardX + index * (dayCellW + gap)
       addPanel(plan, x, boardY, dayCellW, headerH, PALE_GRAY, PALE_GRAY)
       plan.addText(weekday, {
-        x, y: boardY + px(10), w: dayCellW, h: px(18),
-        fontFace: FONT_FACE, fontSize: 11.5, bold: true, align: 'center', color: index === 0 ? 'DC2626' : MUTED_TEXT,
+        x: x - px(4), y: boardY + px(10), w: dayCellW + px(8), h: px(18),
+        fontFace: FONT_FACE, fontSize: 8.5, bold: true, align: 'center', color: index === 0 ? 'DC2626' : MUTED_TEXT,
       })
     })
     addPanel(plan, boardX + calendarW + gap, boardY, weeklyW - gap, headerH, PALE_GRAY, PALE_GRAY)
     plan.addText('주요일정', {
-      x: boardX + calendarW + gap, y: boardY + px(10), w: weeklyW - gap, h: px(18),
-      fontFace: FONT_FACE, fontSize: 11.5, bold: true, align: 'center', color: BODY_TEXT,
+      x: boardX + calendarW + gap - px(4), y: boardY + px(10), w: weeklyW - gap + px(8), h: px(18),
+      fontFace: FONT_FACE, fontSize: 8.5, bold: true, align: 'center', color: BODY_TEXT,
     })
     args.nextPlanCalendar.weeks.forEach((week, weekIndex) => {
       const rowY = boardY + headerH + gap + weekIndex * (bodyH + gap)
@@ -346,8 +346,8 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
           const isHoliday = args.nextPlanCalendar?.holidays.has(day)
           const isSunday = dayIndex === 0
           plan.addText(String(day), {
-            x: x + px(16), y: rowY + px(6), w: px(40), h: px(18),
-            fontFace: FONT_FACE, fontSize: 16.5, color: isSunday || isHoliday ? 'DC2626' : BODY_TEXT,
+            x: x + px(14), y: rowY + px(8), w: px(52), h: px(18),
+            fontFace: FONT_FACE, fontSize: 12, color: isSunday || isHoliday ? 'DC2626' : BODY_TEXT,
           })
         }
       })
