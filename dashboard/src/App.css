@@ -759,26 +759,22 @@ tfoot td {
 
 .report-focus-card {
   min-width: 0;
-  padding: 18px 20px 16px;
+  padding: 16px 18px 14px;
   border-radius: 24px;
 }
 
 .report-focus-card .metric-card__header {
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .report-focus-card .metric-card__icon {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
 }
 
 .report-focus-card .metric-card__value {
-  font-size: clamp(21px, 1.1vw, 24px);
-}
-
-.report-focus-card .metric-card__helper {
-  font-size: 12px;
+  font-size: clamp(20px, 1.05vw, 23px);
 }
 
 .report-panel {
@@ -902,10 +898,26 @@ tfoot td {
   overflow: hidden;
   background: #f8fafc;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 4px 8px 12px;
+  padding: 8px 10px;
   box-sizing: border-box;
+}
+
+.report-ad-gallery__pair {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: center;
+}
+
+.report-ad-gallery__slot {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .report-ad-gallery__image {
@@ -915,15 +927,12 @@ tfoot td {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  object-position: center top;
+  object-position: center;
 }
 
-.report-ad-gallery__image--traffic {
-  transform: translateY(-24px);
-}
-
+.report-ad-gallery__image--traffic,
 .report-ad-gallery__image--purchase {
-  transform: translateY(-18px);
+  transform: none;
 }
 
 .report-panel--ad-empty {

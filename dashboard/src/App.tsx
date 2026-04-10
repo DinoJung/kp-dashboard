@@ -148,22 +148,22 @@ const REPORT_STEPS = [
   { key: 'next-plan', label: 'NEXT PLAN' },
 ] as const
 
-const REPORT_AD_IMAGES: Record<string, Array<{ label: string; src: string }>> = {
+const REPORT_AD_IMAGES: Record<string, Array<{ label: string; images: string[] }>> = {
   '2026-01': [
-    { label: '트래픽', src: '/report-ad/2026-01-traffic.jpg' },
-    { label: '구매전환', src: '/report-ad/2026-01-purchase.jpg' },
+    { label: '트래픽', images: ['/report-ad/2026-01-traffic-1.jpg', '/report-ad/2026-01-traffic-2.jpg'] },
+    { label: '구매전환', images: ['/report-ad/2026-01-purchase-1.jpg', '/report-ad/2026-01-purchase-2.jpg'] },
   ],
   '2026-02': [
-    { label: '트래픽', src: '/report-ad/2026-02-traffic.jpg' },
-    { label: '구매전환', src: '/report-ad/2026-02-purchase.jpg' },
+    { label: '트래픽', images: ['/report-ad/2026-02-traffic-1.jpg', '/report-ad/2026-02-traffic-2.jpg'] },
+    { label: '구매전환', images: ['/report-ad/2026-02-purchase-1.jpg', '/report-ad/2026-02-purchase-2.jpg'] },
   ],
   '2026-03': [
-    { label: '트래픽', src: '/report-ad/2026-03-traffic.jpg' },
-    { label: '구매전환', src: '/report-ad/2026-03-purchase.jpg' },
+    { label: '트래픽', images: ['/report-ad/2026-03-traffic-1.jpg', '/report-ad/2026-03-traffic-2.jpg'] },
+    { label: '구매전환', images: ['/report-ad/2026-03-purchase-1.jpg', '/report-ad/2026-03-purchase-2.jpg'] },
   ],
   '2026-04': [
-    { label: '트래픽', src: '/report-ad/2026-04-traffic.jpg' },
-    { label: '구매전환', src: '/report-ad/2026-04-purchase.jpg' },
+    { label: '트래픽', images: ['/report-ad/2026-04-traffic-1.jpg', '/report-ad/2026-04-traffic-2.jpg'] },
+    { label: '구매전환', images: ['/report-ad/2026-04-purchase-1.jpg', '/report-ad/2026-04-purchase-2.jpg'] },
   ],
 }
 
@@ -1151,7 +1151,6 @@ function App() {
                   <span className="metric-card__title">광고비</span>
                 </div>
                 <strong className="metric-card__value metric-card__value--compact">{formatCurrency(campaignTotals.adSpend)}</strong>
-                <p className="metric-card__helper">전체 캠페인 합산</p>
               </article>
               <article className="metric-card metric-card--slate report-focus-card">
                 <div className="metric-card__header">
@@ -1159,7 +1158,6 @@ function App() {
                   <span className="metric-card__title">노출수</span>
                 </div>
                 <strong className="metric-card__value metric-card__value--compact">{formatNumber(campaignTotals.impressions)}</strong>
-                <p className="metric-card__helper">월간 노출 합계</p>
               </article>
               <article className="metric-card metric-card--emerald report-focus-card">
                 <div className="metric-card__header">
@@ -1167,7 +1165,6 @@ function App() {
                   <span className="metric-card__title">클릭수</span>
                 </div>
                 <strong className="metric-card__value metric-card__value--compact">{formatNumber(campaignTotals.clicks)}</strong>
-                <p className="metric-card__helper">월간 클릭 합계</p>
               </article>
               <article className="metric-card metric-card--gray report-focus-card">
                 <div className="metric-card__header">
@@ -1175,7 +1172,6 @@ function App() {
                   <span className="metric-card__title">CTR</span>
                 </div>
                 <strong className="metric-card__value metric-card__value--compact">{formatRatio(campaignTotals.ctr)}</strong>
-                <p className="metric-card__helper">클릭률 기준</p>
               </article>
               <article className="metric-card metric-card--violet report-focus-card">
                 <div className="metric-card__header">
@@ -1183,7 +1179,6 @@ function App() {
                   <span className="metric-card__title">ROAS</span>
                 </div>
                 <strong className="metric-card__value metric-card__value--compact">{formatRoasPercent(campaignTotals.roas)}</strong>
-                <p className="metric-card__helper">광고비 대비 매출</p>
               </article>
             </section>
             <article className="report-panel report-panel--ad-table">
@@ -1239,18 +1234,24 @@ function App() {
                   const imageKey = image.label === '트래픽' ? 'traffic' : image.label === '구매전환' ? 'purchase' : 'default'
 
                   return (
-                    <article key={image.src} className={`report-panel report-panel--ad-image report-panel--ad-image--${imageKey}`}>
+                    <article key={image.label} className={`report-panel report-panel--ad-image report-panel--ad-image--${imageKey}`}>
                       <div className="report-panel__body report-panel__body--ad">
                         <div className="report-ad-gallery__meta">
                           <span>AD SOURCE</span>
                           <h3>{image.label}</h3>
                         </div>
                         <div className={`report-ad-gallery__frame report-ad-gallery__frame--${imageKey}`}>
-                          <img
-                            className={`report-ad-gallery__image report-ad-gallery__image--${imageKey}`}
-                            src={image.src}
-                            alt={`${monthLabelKorean(currentRow.report_month)} ${image.label} 광고 이미지`}
-                          />
+                          <div className="report-ad-gallery__pair">
+                            {image.images.map((src, index) => (
+                              <div key={src} className="report-ad-gallery__slot">
+                                <img
+                                  className={`report-ad-gallery__image report-ad-gallery__image--${imageKey}`}
+                                  src={src}
+                                  alt={`${monthLabelKorean(currentRow.report_month)} ${image.label} 광고 이미지 ${index + 1}`}
+                                />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </article>
