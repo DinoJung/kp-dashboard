@@ -143,7 +143,7 @@ const sourceSheetUrl = import.meta.env.VITE_SOURCE_SHEET_URL as string | undefin
 
 const REPORT_STEPS = [
   { key: 'summary', label: 'SUMMARY' },
-  { key: 'exposure', label: '노출' },
+  { key: 'exposure', label: 'EXPOSURE' },
   { key: 'ad', label: 'AD' },
   { key: 'next-plan', label: 'NEXT PLAN' },
 ] as const
@@ -1164,7 +1164,7 @@ function App() {
           <div className="report-page__scale report-page__scale--dashboard">
             <div className="report-page__header">
               <p>THEKARY POINT REPORT</p>
-              <h2>{`${monthLabelKorean(currentRow.report_month)} 요약`}</h2>
+              <h2>{`${monthLabelKorean(currentRow.report_month)} RESULT`}</h2>
               <ReportStepNav active="summary" />
             </div>
             <div className="report-dashboard-clone" ref={reportPage2ContentRef} />
