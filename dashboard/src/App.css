@@ -775,7 +775,7 @@ tfoot td {
 
 .report-focus-card .metric-card__value {
   display: block;
-  font-size: clamp(20px, 1.05vw, 23px);
+  font-size: clamp(22px, 1.15vw, 25px);
   text-align: right;
 }
 
@@ -1028,8 +1028,10 @@ tfoot td {
 }
 
 .report-calendar__date {
+  display: inline-block;
+  transform: translateY(-10px);
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 500;
   color: #111827;
 }
 
