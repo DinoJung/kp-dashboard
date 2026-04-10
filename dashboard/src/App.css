@@ -777,6 +777,7 @@ tfoot td {
   display: block;
   font-size: clamp(22px, 1.15vw, 25px);
   text-align: right;
+  padding-right: 16px;
 }
 
 .report-panel {
@@ -1030,7 +1031,7 @@ tfoot td {
 .report-calendar__date {
   display: inline-block;
   transform: translateY(-10px);
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 500;
   color: #111827;
 }
