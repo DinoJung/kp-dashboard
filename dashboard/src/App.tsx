@@ -1378,7 +1378,7 @@ function App() {
                   </div>
                 </div>
                 <div className="report-weekly-list" aria-label="주요일정">
-                  {Array.from({ length: 4 }).map((_, index) => (
+                  {Array.from({ length: nextPlanCalendar?.weeks.length ?? 4 }).map((_, index) => (
                     <div key={index} className="report-weekly-item">ㅁ</div>
                   ))}
                 </div>
