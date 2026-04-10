@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
+import PptxGenJS from 'pptxgenjs'
 import {
   BellRing,
   ChevronDown,
@@ -130,6 +131,8 @@ type MetricCardProps = {
   icon: React.ReactNode
   valueSize?: 'default' | 'compact'
 }
+
+type ReportExportMode = 'pdf' | 'ppt'
 
 const MEMBER_TARGET_2026 = 280_000
 const APP_DOWNLOAD_TARGET_2026 = 130_000
@@ -432,6 +435,7 @@ function App() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isReportConfirmOpen, setIsReportConfirmOpen] = useState(false)
+  const [reportExportMode, setReportExportMode] = useState<ReportExportMode>('pdf')
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const reportPage1Ref = useRef<HTMLDivElement | null>(null)
   const reportPage2Ref = useRef<HTMLDivElement | null>(null)
@@ -746,7 +750,7 @@ function App() {
     mount.append(metricsClone, bottomRow)
   }
 
-  async function handleGenerateReport() {
+  async function handleGenerateReport(mode: ReportExportMode) {
     if (!currentRow || isGeneratingReport) return
 
     const previousExpanded = isPromotionExpanded
@@ -764,19 +768,42 @@ function App() {
       syncReportSummaryDom()
       await new Promise((resolve) => window.setTimeout(resolve, 50))
 
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1920, 1080] })
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const margin = 0
       const refs = [reportPage1Ref, reportPage2Ref, reportPage3Ref, reportPage4Ref, reportPage5Ref]
+      const images: string[] = []
 
-      for (const [index, ref] of refs.entries()) {
-        const imageData = await captureReportPage(ref.current)
-        if (index > 0) pdf.addPage()
-        pdf.addImage(imageData, 'JPEG', margin, margin, pageWidth - margin * 2, pageHeight - margin * 2)
+      for (const ref of refs) {
+        images.push(await captureReportPage(ref.current))
       }
 
-      pdf.save(`thekary-point-report-${monthLabel(currentRow.report_month)}.pdf`)
+      if (mode === 'pdf') {
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1920, 1080] })
+        const pageWidth = pdf.internal.pageSize.getWidth()
+        const pageHeight = pdf.internal.pageSize.getHeight()
+        const margin = 0
+
+        for (const [index, imageData] of images.entries()) {
+          if (index > 0) pdf.addPage()
+          pdf.addImage(imageData, 'JPEG', margin, margin, pageWidth - margin * 2, pageHeight - margin * 2)
+        }
+
+        pdf.save(`thekary-point-report-${monthLabel(currentRow.report_month)}.pdf`)
+        return
+      }
+
+      const pptx = new PptxGenJS()
+      pptx.layout = 'LAYOUT_WIDE'
+      pptx.author = 'Hermes'
+      pptx.company = 'Thekary'
+      pptx.subject = `Thekary Point ${monthLabel(currentRow.report_month)} report`
+      pptx.title = `Thekary Point Report ${monthLabel(currentRow.report_month)}`
+
+      images.forEach((imageData) => {
+        const slide = pptx.addSlide()
+        slide.background = { color: 'FFFFFF' }
+        slide.addImage({ data: imageData, x: 0, y: 0, w: 13.333, h: 7.5 })
+      })
+
+      await pptx.writeFile({ fileName: `thekary-point-report-${monthLabel(currentRow.report_month)}.pptx` })
     } catch (reportError) {
       const message = reportError instanceof Error ? reportError.message : '리포트 생성 중 오류가 발생했습니다.'
       window.alert(message)
@@ -880,8 +907,25 @@ function App() {
                     <ExternalLink size={16} /> 원본 시트 열기
                   </span>
                 )}
-                <button className="settings-menu__item" type="button" onClick={() => setIsReportConfirmOpen(true)}>
-                  <FileText size={16} /> {isGeneratingReport ? '리포트 생성 중…' : '리포트 만들기'}
+                <button
+                  className="settings-menu__item"
+                  type="button"
+                  onClick={() => {
+                    setReportExportMode('pdf')
+                    setIsReportConfirmOpen(true)
+                  }}
+                >
+                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'pdf' ? 'pdf 리포트 생성 중…' : 'pdf 리포트 만들기'}
+                </button>
+                <button
+                  className="settings-menu__item"
+                  type="button"
+                  onClick={() => {
+                    setReportExportMode('ppt')
+                    setIsReportConfirmOpen(true)
+                  }}
+                >
+                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'ppt' ? 'ppt 리포트 생성 중…' : 'ppt 리포트 만들기'}
                 </button>
               </div>
             ) : null}
@@ -1143,13 +1187,17 @@ function App() {
       {isReportConfirmOpen ? (
         <div className="modal-backdrop" role="presentation" onClick={() => setIsReportConfirmOpen(false)}>
           <div className="confirm-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <h2>리포트 만들기</h2>
-            <p>{`${monthLabelKorean(currentRow.report_month)} 기준 리포트를 생성합니다.`}</p>
+            <h2>{reportExportMode === 'pdf' ? 'pdf 리포트 만들기' : 'ppt 리포트 만들기'}</h2>
+            <p>
+              {reportExportMode === 'pdf'
+                ? `${monthLabelKorean(currentRow.report_month)} 기준 pdf 리포트를 생성합니다.`
+                : `${monthLabelKorean(currentRow.report_month)} 기준 ppt 리포트를 생성합니다.`}
+            </p>
             <div className="confirm-modal__actions">
               <button className="ghost-button" type="button" onClick={() => setIsReportConfirmOpen(false)}>
                 취소
               </button>
-              <button className="primary-button" type="button" onClick={() => void handleGenerateReport()}>
+              <button className="primary-button" type="button" onClick={() => void handleGenerateReport(reportExportMode)}>
                 확인
               </button>
             </div>
