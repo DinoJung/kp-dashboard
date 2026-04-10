@@ -748,7 +748,7 @@ tfoot td {
 }
 
 .report-page__scale--ad {
-  gap: 24px;
+  gap: 16px;
 }
 
 .report-panel {
@@ -766,8 +766,15 @@ tfoot td {
   margin-bottom: 16px;
 }
 
+.report-panel--ad-image {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-self: stretch;
+  padding: 16px 24px 24px;
+}
+
 .report-panel--ad-image .report-panel__header {
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .report-panel__header span {
@@ -832,12 +839,11 @@ tfoot td {
 .report-ad-gallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  gap: 18px;
   min-height: 0;
-  align-items: start;
+  align-items: stretch;
 }
 
-.report-panel--ad-image,
 .report-panel--ad-empty {
   display: flex;
   flex-direction: column;
@@ -846,23 +852,33 @@ tfoot td {
 }
 
 .report-ad-gallery__frame {
-  height: 360px;
+  height: 460px;
   border-radius: 20px;
   overflow: hidden;
   background: #f8fafc;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 16px;
+  padding: 4px 10px 22px;
   box-sizing: border-box;
 }
 
-.report-ad-gallery__frame img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+.report-ad-gallery__image {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  object-position: center top;
+}
+
+.report-ad-gallery__image--traffic {
+  transform: translateY(-24px) scale(1.06);
+  transform-origin: top center;
+}
+
+.report-ad-gallery__image--purchase {
+  transform: translateY(-18px) scale(1.03);
+  transform-origin: top center;
 }
 
 .report-panel--ad-empty {

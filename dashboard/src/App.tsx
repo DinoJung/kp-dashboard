@@ -1193,19 +1193,27 @@ function App() {
             </article>
             <div className="report-ad-gallery">
               {reportAdImages.length ? (
-                reportAdImages.map((image) => (
-                  <article key={image.src} className="report-panel report-panel--ad-image">
-                    <div className="report-panel__header">
-                      <div>
-                        <span>AD SOURCE</span>
-                        <h3>{image.label}</h3>
+                reportAdImages.map((image) => {
+                  const imageKey = image.label === '트래픽' ? 'traffic' : image.label === '구매전환' ? 'purchase' : 'default'
+
+                  return (
+                    <article key={image.src} className={`report-panel report-panel--ad-image report-panel--ad-image--${imageKey}`}>
+                      <div className="report-panel__header">
+                        <div>
+                          <span>AD SOURCE</span>
+                          <h3>{image.label}</h3>
+                        </div>
                       </div>
-                    </div>
-                    <div className="report-ad-gallery__frame">
-                      <img src={image.src} alt={`${monthLabelKorean(currentRow.report_month)} ${image.label} 광고 이미지`} />
-                    </div>
-                  </article>
-                ))
+                      <div className={`report-ad-gallery__frame report-ad-gallery__frame--${imageKey}`}>
+                        <img
+                          className={`report-ad-gallery__image report-ad-gallery__image--${imageKey}`}
+                          src={image.src}
+                          alt={`${monthLabelKorean(currentRow.report_month)} ${image.label} 광고 이미지`}
+                        />
+                      </div>
+                    </article>
+                  )
+                })
               ) : (
                 <article className="report-panel report-panel--ad-empty">
                   <div className="report-panel__header">
