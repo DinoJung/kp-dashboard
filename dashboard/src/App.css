@@ -969,28 +969,28 @@ tfoot td {
 
 .report-next-plan-layout {
   display: grid;
-  grid-template-columns: minmax(0, 0.6fr) minmax(0, 0.4fr);
-  gap: 20px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.report-next-plan-calendar {
+.report-next-plan-board {
   min-height: 720px;
 }
 
-.report-next-plan-weekly {
-  min-height: 720px;
+.report-calendar-board {
+  display: grid;
+  gap: 12px;
 }
 
-.report-calendar {
+.report-calendar-board__header,
+.report-calendar__week-row {
   display: grid;
-  gap: 18px;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(0, 0.6fr);
+  gap: 12px;
+  align-items: stretch;
 }
 
-.report-calendar__weekdays,
-.report-calendar__grid {
+.report-calendar-board__body {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1009,7 +1009,12 @@ tfoot td {
   color: #dc2626;
 }
 
-.report-calendar__cell {
+.report-calendar__weekday--weekly {
+  color: #111827;
+}
+
+.report-calendar__cell,
+.report-weekly-item {
   min-height: 94px;
   border-radius: 18px;
   border: 1px solid #e5e7eb;
@@ -1032,18 +1037,9 @@ tfoot td {
   color: #dc2626;
 }
 
-.report-weekly-list {
-  display: grid;
-  gap: 16px;
-}
-
 .report-weekly-item {
-  min-height: 108px;
-  border-radius: 20px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  padding: 24px 26px;
-  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
   font-size: 28px;
   color: #111827;
 }

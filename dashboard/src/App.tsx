@@ -1337,7 +1337,7 @@ function App() {
               <ReportStepNav active="next-plan" />
             </div>
             <section className="report-next-plan-layout">
-              <article className="report-panel report-next-plan-calendar">
+              <article className="report-panel report-next-plan-board">
                 <div className="report-panel__header">
                   <div>
                     <span>다음달 일정</span>
@@ -1345,43 +1345,34 @@ function App() {
                   </div>
                 </div>
                 {nextPlanCalendar ? (
-                  <div className="report-calendar">
-                    <div className="report-calendar__weekdays">
+                  <div className="report-calendar-board">
+                    <div className="report-calendar-board__header">
                       {calendarWeekdays.map((weekday, index) => (
                         <span key={weekday} className={`report-calendar__weekday${index === 0 ? ' is-sunday' : ''}`}>{weekday}</span>
                       ))}
+                      <span className="report-calendar__weekday report-calendar__weekday--weekly">주요일정</span>
                     </div>
-                    <div className="report-calendar__grid">
-                      {nextPlanCalendar.weeks.flatMap((week, weekIndex) =>
-                        week.map((day, dayIndex) => {
-                          const isHoliday = day !== null && nextPlanCalendar.holidays.has(day)
-                          const isSunday = dayIndex === 0
-                          return (
-                            <div
-                              key={`${nextPlanCalendar.monthKey}-${weekIndex}-${dayIndex}`}
-                              className={`report-calendar__cell${day === null ? ' is-empty' : ''}`}
-                            >
-                              {day !== null ? <span className={`report-calendar__date${isSunday || isHoliday ? ' is-holiday' : ''}`}>{day}</span> : null}
-                            </div>
-                          )
-                        }),
-                      )}
+                    <div className="report-calendar-board__body">
+                      {nextPlanCalendar.weeks.map((week, weekIndex) => (
+                        <div key={`${nextPlanCalendar.monthKey}-week-${weekIndex}`} className="report-calendar__week-row">
+                          {week.map((day, dayIndex) => {
+                            const isHoliday = day !== null && nextPlanCalendar.holidays.has(day)
+                            const isSunday = dayIndex === 0
+                            return (
+                              <div
+                                key={`${nextPlanCalendar.monthKey}-${weekIndex}-${dayIndex}`}
+                                className={`report-calendar__cell${day === null ? ' is-empty' : ''}`}
+                              >
+                                {day !== null ? <span className={`report-calendar__date${isSunday || isHoliday ? ' is-holiday' : ''}`}>{day}</span> : null}
+                              </div>
+                            )
+                          })}
+                          <div className="report-weekly-item">ㅁ</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ) : null}
-              </article>
-              <article className="report-panel report-next-plan-weekly">
-                <div className="report-panel__header">
-                  <div>
-                    <span>WEEKLY</span>
-                    <h3>주요일정</h3>
-                  </div>
-                </div>
-                <div className="report-weekly-list" aria-label="주요일정">
-                  {Array.from({ length: nextPlanCalendar?.weeks.length ?? 4 }).map((_, index) => (
-                    <div key={index} className="report-weekly-item">ㅁ</div>
-                  ))}
-                </div>
               </article>
             </section>
           </div>
