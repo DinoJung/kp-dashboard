@@ -865,20 +865,20 @@ tfoot td {
 
 .report-ad-gallery__image {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   object-position: center top;
 }
 
 .report-ad-gallery__image--traffic {
-  transform: translateY(-24px) scale(1.06);
-  transform-origin: top center;
+  transform: translateY(-24px);
 }
 
 .report-ad-gallery__image--purchase {
-  transform: translateY(-18px) scale(1.03);
-  transform-origin: top center;
+  transform: translateY(-18px);
 }
 
 .report-panel--ad-empty {
