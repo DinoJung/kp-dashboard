@@ -984,7 +984,7 @@ tfoot td {
 .report-calendar-board__header,
 .report-calendar__week-row {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(0, 0.6fr);
+  grid-template-columns: repeat(7, minmax(0, 0.8571fr)) minmax(0, 4fr);
   gap: 12px;
   align-items: stretch;
 }

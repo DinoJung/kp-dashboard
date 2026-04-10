@@ -1367,7 +1367,7 @@ function App() {
                               </div>
                             )
                           })}
-                          <div className="report-weekly-item">ㅁ</div>
+                          <div className="report-weekly-item" />
                         </div>
                       ))}
                     </div>
