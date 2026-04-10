@@ -668,14 +668,14 @@ tfoot td {
 }
 
 .report-exposure-panel__copy strong {
-  font-size: 30px;
+  font-size: 26px;
   line-height: 1.4;
   font-weight: 700;
   color: #111827;
 }
 
 .report-exposure-panel__copy p {
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1.45;
   font-weight: 600;
   color: #4b5563;
@@ -785,7 +785,7 @@ tfoot td {
 
 .report-page__scale--ad {
   gap: 14px;
-  transform: translateY(-4px);
+  transform: translateY(-2px);
 }
 
 .report-ad-focus-grid {

@@ -1201,8 +1201,8 @@ function App() {
             </div>
             <section className="report-exposure-panel">
               <div className="report-exposure-panel__copy">
-                <strong>더캐리포인트 가입 유도 팝업 | 브랜드 홈페이지 메인홈(BP, BPU, IB, KR), 마이페이지(KR), 이벤트페이지(KP)</strong>
-                <p>{`${exposureFirstBusinessDay} 10:00 BP, BPU, IB, PK, KR`}</p>
+                <strong>{`더캐리포인트 가입 유도 팝업 | ${exposureFirstBusinessDay} 10:00`}</strong>
+                <p>이벤트페이지(KP), 브랜드 홈페이지 메인홈(BP, BPU, IB, KR), 마이페이지(KR)</p>
               </div>
               <div className="report-exposure-panel__frame" />
             </section>
