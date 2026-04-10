@@ -206,6 +206,23 @@ function nextMonthLabel(value: string) {
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
 }
 
+function getFirstBusinessDayLabel(value: string) {
+  const [yearText, monthText] = value.split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  let day = 1
+
+  while (true) {
+    const date = new Date(year, month - 1, day)
+    const weekday = date.getDay()
+    if (weekday !== 0 && weekday !== 6) {
+      const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토']
+      return `${month}/${day}(${weekdayLabels[weekday]})`
+    }
+    day += 1
+  }
+}
+
 function getKoreanHolidaySet(monthKey: string) {
   const holidaysByMonth: Record<string, number[]> = {
     '2026-01': [1],
@@ -665,6 +682,7 @@ function App() {
   const reportMonthKey = currentRow ? monthLabel(currentRow.report_month) : ''
   const reportAdImages = reportMonthKey ? REPORT_AD_IMAGES[reportMonthKey] ?? [] : []
   const nextPlanCalendar = currentRow ? buildMonthCalendar(nextMonthLabel(currentRow.report_month)) : null
+  const exposureFirstBusinessDay = currentRow ? getFirstBusinessDayLabel(currentRow.report_month) : ''
   const calendarWeekdays = ['일', '월', '화', '수', '목', '금', '토']
 
   const chartData = useMemo(
@@ -1178,13 +1196,16 @@ function App() {
           <div className="report-page__scale">
             <div className="report-page__header">
               <p>THEKARY POINT REPORT</p>
-              <h2>{`${monthLabelKorean(currentRow.report_month)} 노출`}</h2>
+              <h2>{`${monthLabelKorean(currentRow.report_month)} 브랜드 사이트 팝업`}</h2>
               <ReportStepNav active="exposure" />
             </div>
-            <div className="report-placeholder-panel report-placeholder-panel--wide">
-              <strong>노출 페이지 구성 예정</strong>
-              <p>현재는 섹션 위치 확인용 페이지야. 다음 단계에서 노출·트래픽 중심 지표와 시각화를 연결할 수 있게 자리만 먼저 잡아뒀어.</p>
-            </div>
+            <section className="report-exposure-panel">
+              <div className="report-exposure-panel__copy">
+                <strong>더캐리포인트 가입 유도 팝업 | 브랜드 홈페이지 메인홈(BP, BPU, IB, KR), 마이페이지(KR), 이벤트페이지(KP)</strong>
+                <p>{`${exposureFirstBusinessDay} 10:00 BP, BPU, IB, PK, KR`}</p>
+              </div>
+              <div className="report-exposure-panel__frame" />
+            </section>
           </div>
         </div>
 
@@ -1202,7 +1223,7 @@ function App() {
               <article className="metric-card metric-card--amber report-focus-card">
                 <div className="metric-card__header">
                   <span className="metric-card__icon"><Coins size={18} /></span>
-                  <span className="metric-card__title">광고비</span>
+                  <span className="metric-card__title">광고비(마크업, vat-)</span>
                 </div>
                 <strong className="metric-card__value metric-card__value--compact">{formatCurrency(campaignTotals.adSpend)}</strong>
               </article>
