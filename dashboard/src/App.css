@@ -929,7 +929,7 @@ tfoot td {
 
 .report-ad-gallery__slot--secondary {
   width: 34%;
-  height: 84%;
+  height: 100%;
 }
 
 .report-ad-gallery__frame--traffic .report-ad-gallery__pair {
@@ -943,7 +943,7 @@ tfoot td {
 
 .report-ad-gallery__frame--traffic .report-ad-gallery__slot--secondary {
   width: 28%;
-  height: 80%;
+  height: 100%;
 }
 
 .report-ad-gallery__image {

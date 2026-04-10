@@ -875,16 +875,16 @@ function App() {
         <MetricCard
           title="회원수"
           value={`${formatNumber(currentRow.new_members)}명`}
-          delta={`누적 ${formatNumber(cumulativeNetMembers)} /`}
-          helper={`26Y KPI ${formatNumber(MEMBER_TARGET_2026)} (${memberKpiRatio})`}
+          delta={`누적 ${formatNumber(cumulativeNetMembers)} (${memberKpiRatio})`}
+          helper={`26Y KPI ${formatNumber(MEMBER_TARGET_2026)}`}
           accent="slate"
           icon={<Users size={18} />}
         />
         <MetricCard
           title="앱다운로드"
           value={`${formatNumber(currentRow.app_downloads)}건`}
-          delta={`누적 ${formatNumber(cumulativeAppDownloads)} /`}
-          helper={`26Y KPI ${formatNumber(APP_DOWNLOAD_TARGET_2026)} (${appDownloadKpiRatio})`}
+          delta={`누적 ${formatNumber(cumulativeAppDownloads)} (${appDownloadKpiRatio})`}
+          helper={`26Y KPI ${formatNumber(APP_DOWNLOAD_TARGET_2026)}`}
           accent="amber"
           icon={<Download size={18} />}
         />
