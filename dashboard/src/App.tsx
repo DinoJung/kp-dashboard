@@ -32,6 +32,7 @@ import {
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import './App.css'
 import thekaryPointLogo from '../assets/thekary-point-logo-reference.jpg'
+import { generateEditableReportPpt } from './pptEditableReport'
 
 type MonthlyOverviewRow = {
   report_month: string
@@ -132,7 +133,7 @@ type MetricCardProps = {
   valueSize?: 'default' | 'compact'
 }
 
-type ReportExportMode = 'pdf' | 'ppt'
+type ReportExportMode = 'pdf' | 'ppt' | 'ppt2'
 
 const MEMBER_TARGET_2026 = 280_000
 const APP_DOWNLOAD_TARGET_2026 = 130_000
@@ -790,20 +791,137 @@ function App() {
         return
       }
 
-      const pptx = new PptxGenJS()
-      pptx.layout = 'LAYOUT_WIDE'
-      pptx.author = 'Hermes'
-      pptx.company = 'Thekary'
-      pptx.subject = `Thekary Point ${monthLabel(currentRow.report_month)} report`
-      pptx.title = `Thekary Point Report ${monthLabel(currentRow.report_month)}`
+      if (mode === 'ppt') {
+        const pptx = new PptxGenJS()
+        pptx.layout = 'LAYOUT_WIDE'
+        pptx.author = 'Hermes'
+        pptx.company = 'Thekary'
+        pptx.subject = `Thekary Point ${monthLabel(currentRow.report_month)} report`
+        pptx.title = `Thekary Point Report ${monthLabel(currentRow.report_month)}`
 
-      images.forEach((imageData) => {
-        const slide = pptx.addSlide()
-        slide.background = { color: 'FFFFFF' }
-        slide.addImage({ data: imageData, x: 0, y: 0, w: 13.333, h: 7.5 })
+        images.forEach((imageData) => {
+          const slide = pptx.addSlide()
+          slide.background = { color: 'FFFFFF' }
+          slide.addImage({ data: imageData, x: 0, y: 0, w: 13.333, h: 7.5 })
+        })
+
+        await pptx.writeFile({ fileName: `thekary-point-report-${monthLabel(currentRow.report_month)}.pptx` })
+        return
+      }
+
+      await generateEditableReportPpt({
+        reportMonthKey: monthLabel(currentRow.report_month),
+        monthLabelKorean: monthLabelKorean(currentRow.report_month),
+        monthEndLabel: monthEndLabel(currentRow.report_month),
+        exposureFirstBusinessDay,
+        logoSrc: thekaryPointLogo,
+        coverTitle: `${monthLabel(currentRow.report_month).slice(5).replace('-', '')}월 운영 결과 보고서`,
+        resultMetricCards: [
+          {
+            title: '회원수',
+            value: `${formatNumber(currentRow.new_members)}명`,
+            delta: `누적 ${formatNumber(cumulativeNetMembers)} (${memberKpiRatio})`,
+            helper: `26Y KPI ${formatNumber(MEMBER_TARGET_2026)}`,
+            accent: '94A3B8',
+          },
+          {
+            title: '앱다운로드',
+            value: `${formatNumber(currentRow.app_downloads)}건`,
+            delta: `누적 ${formatNumber(cumulativeAppDownloads)} (${appDownloadKpiRatio})`,
+            helper: `26Y KPI ${formatNumber(APP_DOWNLOAD_TARGET_2026)}`,
+            accent: 'F59E0B',
+          },
+          {
+            title: '수신동의수',
+            value: currentOptInCount !== null ? `${formatNumber(currentOptInCount)}건` : '연동 대기',
+            delta: `누적 ${formatNumber(cumulativeOptInCount)}건`,
+            helper: '',
+            accent: '9CA3AF',
+          },
+          {
+            title: '포인트 연계매출',
+            value: formatCurrency(currentRow.linked_sales_amount),
+            delta: summarizePercentChange(currentRow.linked_sales_amount, previousRow?.linked_sales_amount),
+            helper: `포인트 사용률 ${formatRatio(currentRow.point_usage_rate)}`,
+            accent: '10B981',
+          },
+          {
+            title: '광고 기여매출',
+            value: formatCurrency(currentRow.ad_revenue),
+            delta: summarizePercentChange(currentRow.ad_revenue, previousRow?.ad_revenue),
+            helper: `ROAS ${formatRoasPercent(currentRow.roas_markup_vat_exclusive)}`,
+            accent: '8B5CF6',
+          },
+          {
+            title: 'MAU',
+            value: currentMau ? `${formatNumber(currentMau)}명` : '집계 없음',
+            delta: summarizeChange(currentMau, previousMau, '명'),
+            helper: currentMau ? '' : '월별 MAU 데이터 없음',
+            accent: '0EA5E9',
+          },
+          {
+            title: 'DAU',
+            value: currentAverageDau ? `${formatNumber(currentAverageDau)}명` : '집계 없음',
+            delta: summarizeChange(currentAverageDau, previousAverageDau, '명'),
+            helper: currentAverageDau ? '월평균 기준' : '2026-02-24 이전 데이터 없음',
+            accent: 'F43F5E',
+          },
+        ],
+        sixMonthTableRows: [
+          ['월', '회원수', '앱다운로드', '수신동의수', '포인트 연계매출', '광고 기여매출', 'MAU', 'DAU'],
+          ...sixMonthRows.slice().reverse().map((row) => [
+            monthLabel(row.report_month),
+            formatNumber(row.new_members),
+            formatNumber(row.app_downloads),
+            formatNumber(row.opt_in_count),
+            formatCurrency(row.linked_sales_amount),
+            formatCurrency(row.ad_revenue),
+            formatNumber(row.reported_mau),
+            formatNumber(row.average_dau),
+          ]),
+        ],
+        promotionRows: [
+          ['프로모션', '지급 인원', '지급 포인트', '총 지급'],
+          ...collapsedPromotionRows.map((row) => [
+            row.promotion_type,
+            formatNumber(row.participant_count),
+            row.point_display,
+            row.total_points_issued ? `${formatNumber(row.total_points_issued)}P` : '-',
+          ]),
+          ['Total', formatNumber(promotionTotals.participantCount), '-', `${formatNumber(promotionTotals.totalPointsIssued)}P`],
+        ],
+        adMetricCards: [
+          { title: '광고비(마크업, vat-)', value: formatCurrency(campaignTotals.adSpend), accent: 'F59E0B' },
+          { title: '노출수', value: formatNumber(campaignTotals.impressions), accent: '64748B' },
+          { title: '클릭수', value: formatNumber(campaignTotals.clicks), accent: '10B981' },
+          { title: 'CTR', value: formatRatio(campaignTotals.ctr), accent: '9CA3AF' },
+          { title: 'ROAS', value: formatRoasPercent(campaignTotals.roas), accent: '8B5CF6' },
+        ],
+        campaignRows: [
+          ['캠페인', '광고비', '광고 기여매출', 'ROAS', 'CTR', '노출', '클릭'],
+          ...campaignsForMonth.map((row) => [
+            formatCampaignLabel(row.placement_name),
+            formatNullableCurrency(row.ad_spend_markup_vat_exclusive),
+            formatNullableCurrency(row.revenue),
+            formatRoasPercent(row.roas_markup_vat_exclusive),
+            formatNullableRatio(row.ctr),
+            formatNullableNumber(row.impressions),
+            formatNullableNumber(row.clicks),
+          ]),
+          [
+            'Total',
+            formatCurrency(campaignTotals.adSpend),
+            formatCurrency(campaignTotals.revenue),
+            formatRoasPercent(campaignTotals.roas),
+            formatRatio(campaignTotals.ctr),
+            formatNumber(campaignTotals.impressions),
+            formatNumber(campaignTotals.clicks),
+          ],
+        ],
+        adSourceCards: reportAdImages,
+        nextPlanCalendar,
+        calendarWeekdays,
       })
-
-      await pptx.writeFile({ fileName: `thekary-point-report-${monthLabel(currentRow.report_month)}.pptx` })
     } catch (reportError) {
       const message = reportError instanceof Error ? reportError.message : '리포트 생성 중 오류가 발생했습니다.'
       window.alert(message)
@@ -915,7 +1033,7 @@ function App() {
                     setIsReportConfirmOpen(true)
                   }}
                 >
-                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'pdf' ? 'pdf 리포트 생성 중…' : 'pdf 리포트 만들기'}
+                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'pdf' ? 'PDF 리포트 생성 중…' : 'PDF 리포트 만들기'}
                 </button>
                 <button
                   className="settings-menu__item"
@@ -925,7 +1043,17 @@ function App() {
                     setIsReportConfirmOpen(true)
                   }}
                 >
-                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'ppt' ? 'ppt 리포트 생성 중…' : 'ppt 리포트 만들기'}
+                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'ppt' ? 'PPT 리포트 생성 중…' : 'PPT 리포트 만들기'}
+                </button>
+                <button
+                  className="settings-menu__item"
+                  type="button"
+                  onClick={() => {
+                    setReportExportMode('ppt2')
+                    setIsReportConfirmOpen(true)
+                  }}
+                >
+                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'ppt2' ? 'PPT 리포트 만들기 2 생성 중…' : 'PPT 리포트 만들기 2'}
                 </button>
               </div>
             ) : null}
@@ -1187,11 +1315,19 @@ function App() {
       {isReportConfirmOpen ? (
         <div className="modal-backdrop" role="presentation" onClick={() => setIsReportConfirmOpen(false)}>
           <div className="confirm-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <h2>{reportExportMode === 'pdf' ? 'pdf 리포트 만들기' : 'ppt 리포트 만들기'}</h2>
+            <h2>
+              {reportExportMode === 'pdf'
+                ? 'PDF 리포트 만들기'
+                : reportExportMode === 'ppt'
+                  ? 'PPT 리포트 만들기'
+                  : 'PPT 리포트 만들기 2'}
+            </h2>
             <p>
               {reportExportMode === 'pdf'
-                ? `${monthLabelKorean(currentRow.report_month)} 기준 pdf 리포트를 생성합니다.`
-                : `${monthLabelKorean(currentRow.report_month)} 기준 ppt 리포트를 생성합니다.`}
+                ? `${monthLabelKorean(currentRow.report_month)} 기준 PDF 리포트를 생성합니다.`
+                : reportExportMode === 'ppt'
+                  ? `${monthLabelKorean(currentRow.report_month)} 기준 PPT 리포트를 생성합니다.`
+                  : `${monthLabelKorean(currentRow.report_month)} 기준 편집형 PPT 리포트를 생성합니다.`}
             </p>
             <div className="confirm-modal__actions">
               <button className="ghost-button" type="button" onClick={() => setIsReportConfirmOpen(false)}>

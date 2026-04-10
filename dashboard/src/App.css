@@ -149,11 +149,13 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  min-width: 180px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  min-width: 248px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(229, 231, 235, 0.9);
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding: 8px;
   display: grid;
   gap: 6px;
@@ -172,6 +174,7 @@
   color: #111827;
   text-decoration: none;
   font: inherit;
+  white-space: nowrap;
   cursor: pointer;
 }
 
