@@ -206,6 +206,22 @@ function nextMonthLabel(value: string) {
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
 }
 
+function getKoreanHolidaySet(monthKey: string) {
+  const holidaysByMonth: Record<string, number[]> = {
+    '2026-01': [1],
+    '2026-02': [16, 17, 18],
+    '2026-03': [1, 2],
+    '2026-05': [5],
+    '2026-06': [6],
+    '2026-08': [15],
+    '2026-09': [24, 25, 26],
+    '2026-10': [3, 9],
+    '2026-12': [25],
+  }
+
+  return new Set(holidaysByMonth[monthKey] ?? [])
+}
+
 function buildMonthCalendar(value: string) {
   const [yearText, monthText] = value.split('-')
   const year = Number(yearText)
@@ -214,6 +230,7 @@ function buildMonthCalendar(value: string) {
   const lastDate = new Date(year, month, 0).getDate()
   const startWeekday = firstDay.getDay()
   const weeks: Array<Array<number | null>> = []
+  const holidays = getKoreanHolidaySet(value)
   let currentWeek = Array.from({ length: 7 }, () => null as number | null)
 
   for (let day = 1; day <= lastDate; day += 1) {
@@ -229,6 +246,7 @@ function buildMonthCalendar(value: string) {
     monthKey: value,
     monthLabel: monthLabelKorean(value),
     weeks,
+    holidays,
   }
 }
 
@@ -1329,24 +1347,41 @@ function App() {
                 {nextPlanCalendar ? (
                   <div className="report-calendar">
                     <div className="report-calendar__weekdays">
-                      {calendarWeekdays.map((weekday) => (
-                        <span key={weekday} className="report-calendar__weekday">{weekday}</span>
+                      {calendarWeekdays.map((weekday, index) => (
+                        <span key={weekday} className={`report-calendar__weekday${index === 0 ? ' is-sunday' : ''}`}>{weekday}</span>
                       ))}
                     </div>
                     <div className="report-calendar__grid">
                       {nextPlanCalendar.weeks.flatMap((week, weekIndex) =>
-                        week.map((day, dayIndex) => (
-                          <div
-                            key={`${nextPlanCalendar.monthKey}-${weekIndex}-${dayIndex}`}
-                            className={`report-calendar__cell${day === null ? ' is-empty' : ''}`}
-                          >
-                            {day !== null ? <span className="report-calendar__date">{day}</span> : null}
-                          </div>
-                        )),
+                        week.map((day, dayIndex) => {
+                          const isHoliday = day !== null && nextPlanCalendar.holidays.has(day)
+                          const isSunday = dayIndex === 0
+                          return (
+                            <div
+                              key={`${nextPlanCalendar.monthKey}-${weekIndex}-${dayIndex}`}
+                              className={`report-calendar__cell${day === null ? ' is-empty' : ''}`}
+                            >
+                              {day !== null ? <span className={`report-calendar__date${isSunday || isHoliday ? ' is-holiday' : ''}`}>{day}</span> : null}
+                            </div>
+                          )
+                        }),
                       )}
                     </div>
                   </div>
                 ) : null}
+              </article>
+              <article className="report-panel report-next-plan-weekly">
+                <div className="report-panel__header">
+                  <div>
+                    <span>WEEKLY</span>
+                    <h3>주요일정</h3>
+                  </div>
+                </div>
+                <div className="report-weekly-list" aria-label="주요일정">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="report-weekly-item">ㅁ</div>
+                  ))}
+                </div>
               </article>
             </section>
           </div>
