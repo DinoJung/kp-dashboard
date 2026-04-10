@@ -1144,6 +1144,48 @@ function App() {
               <h2>{`${monthLabelKorean(currentRow.report_month)} AD`}</h2>
               <ReportStepNav active="ad" />
             </div>
+            <section className="report-ad-focus-grid" aria-label="AD 핵심 지표">
+              <article className="metric-card metric-card--amber report-focus-card">
+                <div className="metric-card__header">
+                  <span className="metric-card__icon"><Coins size={18} /></span>
+                  <span className="metric-card__title">광고비</span>
+                </div>
+                <strong className="metric-card__value metric-card__value--compact">{formatCurrency(campaignTotals.adSpend)}</strong>
+                <p className="metric-card__helper">전체 캠페인 합산</p>
+              </article>
+              <article className="metric-card metric-card--slate report-focus-card">
+                <div className="metric-card__header">
+                  <span className="metric-card__icon"><Megaphone size={18} /></span>
+                  <span className="metric-card__title">노출수</span>
+                </div>
+                <strong className="metric-card__value metric-card__value--compact">{formatNumber(campaignTotals.impressions)}</strong>
+                <p className="metric-card__helper">월간 노출 합계</p>
+              </article>
+              <article className="metric-card metric-card--emerald report-focus-card">
+                <div className="metric-card__header">
+                  <span className="metric-card__icon"><MousePointerClick size={18} /></span>
+                  <span className="metric-card__title">클릭수</span>
+                </div>
+                <strong className="metric-card__value metric-card__value--compact">{formatNumber(campaignTotals.clicks)}</strong>
+                <p className="metric-card__helper">월간 클릭 합계</p>
+              </article>
+              <article className="metric-card metric-card--gray report-focus-card">
+                <div className="metric-card__header">
+                  <span className="metric-card__icon"><RefreshCw size={18} /></span>
+                  <span className="metric-card__title">CTR</span>
+                </div>
+                <strong className="metric-card__value metric-card__value--compact">{formatRatio(campaignTotals.ctr)}</strong>
+                <p className="metric-card__helper">클릭률 기준</p>
+              </article>
+              <article className="metric-card metric-card--violet report-focus-card">
+                <div className="metric-card__header">
+                  <span className="metric-card__icon"><TrendingUp size={18} /></span>
+                  <span className="metric-card__title">ROAS</span>
+                </div>
+                <strong className="metric-card__value metric-card__value--compact">{formatRoasPercent(campaignTotals.roas)}</strong>
+                <p className="metric-card__helper">광고비 대비 매출</p>
+              </article>
+            </section>
             <article className="report-panel report-panel--ad-table">
               <div className="report-panel__header">
                 <div>
