@@ -1212,7 +1212,7 @@ function App() {
         <article className="panel panel--wide">
           <div className="panel__header">
             <div>
-              <p className="panel__eyebrow">광고 상세</p>
+              <p className="panel__eyebrow">광고상세</p>
               <h2>META 캠페인 성과</h2>
             </div>
           </div>
@@ -1346,7 +1346,7 @@ function App() {
           <div className="report-cover__center">
             <p className="report-cover__eyebrow">THEKARY POINT REPORT</p>
             <h1 className="report-cover__title">
-              <span className="report-cover__title-gray">더캐리포인트</span>{' '}
+              <span className="report-cover__title-gray">더캐리포인트</span>
               <span className="report-cover__title-accent">{monthLabel(currentRow.report_month).slice(5).replace('-', '')}월 운영 결과 보고서</span>
             </h1>
             <div className="report-cover__meta report-cover__meta--center">
@@ -1443,7 +1443,7 @@ function App() {
             <article className="report-panel report-panel--ad-table">
               <div className="report-panel__header">
                 <div>
-                  <span>광고 상세</span>
+                  <span>광고상세</span>
                   <h3>META 캠페인 성과</h3>
                 </div>
               </div>

@@ -150,7 +150,7 @@
   top: calc(100% + 8px);
   right: 0;
   min-width: 248px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.91);
   border: 1px solid rgba(229, 231, 235, 0.9);
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
@@ -574,6 +574,11 @@ tfoot td {
   font-size: 54px;
   line-height: 1.28;
   font-weight: 700;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  text-align: center;
 }
 
 .report-cover__title-gray {
@@ -627,6 +632,7 @@ tfoot td {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .report-step-nav__item {
@@ -764,11 +770,11 @@ tfoot td {
 }
 
 .report-dom-clone__panel--summary table {
-  font-size: clamp(10px, 0.7vw, 13px);
+  font-size: 15px;
 }
 
 .report-dom-clone__panel--promotion table {
-  font-size: clamp(11px, 0.78vw, 14px);
+  font-size: 15px;
 }
 
 .report-dom-clone__panel thead th,
@@ -779,6 +785,13 @@ tfoot td {
   word-break: keep-all;
   overflow-wrap: anywhere;
   line-height: 1.35;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.report-dom-clone__panel tfoot td {
+  background: #dce6f1;
+  font-weight: 700;
 }
 
 .report-dom-clone__panel .panel__eyebrow {
@@ -844,7 +857,7 @@ tfoot td {
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr);
   gap: 14px;
-  align-items: start;
+  align-items: center;
   min-height: 270px;
 }
 
@@ -870,6 +883,14 @@ tfoot td {
   margin-bottom: 6px;
 }
 
+.report-panel--ad-table .report-panel__header span {
+  font-size: 12px;
+}
+
+.report-panel--ad-table h3 {
+  font-size: 24px;
+}
+
 .report-panel h3 {
   font-size: 28px;
   color: #111827;
@@ -891,7 +912,8 @@ tfoot td {
 .report-table td {
   padding: 12px 10px;
   border-bottom: 1px solid #eef2f7;
-  text-align: left;
+  text-align: center;
+  vertical-align: middle;
   line-height: 1.35;
   white-space: normal;
   word-break: keep-all;
@@ -906,6 +928,7 @@ tfoot td {
 
 .report-table tfoot td {
   font-weight: 700;
+  background: #dce6f1;
 }
 
 .report-panel--ad-table {
@@ -913,7 +936,7 @@ tfoot td {
 }
 
 .report-table--ad {
-  font-size: clamp(12px, 0.78vw, 14px);
+  font-size: 15px;
 }
 
 .report-table-wrap--ad {
@@ -951,14 +974,14 @@ tfoot td {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   gap: 14px;
 }
 
 .report-ad-gallery__slot {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
 }
 
@@ -989,7 +1012,7 @@ tfoot td {
 .report-ad-gallery__image {
   display: block;
   width: auto;
-  height: auto;
+  height: 220px;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
