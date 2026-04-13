@@ -232,25 +232,23 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     }) as any
   }
 
-  async function addMatchedHeightImages(slide: PptxGenJS.Slide, sources: string[], slotX: number, slotY: number, slotW: number, slotGap: number, imageBoxH: number) {
+  async function addMatchedHeightImages(slide: PptxGenJS.Slide, sources: string[], boxX: number, boxY: number, boxW: number, boxH: number, gap: number, fixedHeight: number) {
     const validSources = sources.filter(Boolean).slice(0, 2)
     if (!validSources.length) return
 
     const sizes = await Promise.all(validSources.map((src) => getImageSize(src)))
-    const maxSharedHeight = Math.min(
-      imageBoxH,
-      ...sizes.map((size) => slotW / (size.width / size.height)),
-    )
+    const drawH = Math.min(fixedHeight, boxH)
+    const widths = sizes.map((size) => drawH * (size.width / size.height))
+    const totalGap = gap * Math.max(0, validSources.length - 1)
+    const totalWidth = widths.reduce((sum, value) => sum + value, 0) + totalGap
+    let cursorX = boxX + Math.max(0, (boxW - totalWidth) / 2)
+    const y = boxY + Math.max(0, (boxH - drawH) / 2)
 
     for (const [index, src] of validSources.entries()) {
       const data = await toDataUrl(src)
-      const size = sizes[index]
-      const imageRatio = size.width / size.height
-      const drawH = maxSharedHeight
-      const drawW = drawH * imageRatio
-      const x = slotX + index * (slotW + slotGap) + (slotW - drawW) / 2
-      const y = slotY + (imageBoxH - drawH) / 2
-      slide.addImage({ data, x, y, w: drawW, h: drawH })
+      const drawW = widths[index]
+      slide.addImage({ data, x: cursorX, y, w: drawW, h: drawH })
+      cursorX += drawW + gap
     }
   }
 
@@ -354,12 +352,12 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     ad.addText(card.label, {
       x: panelX + px(24), y: px(706), w: px(154), h: px(24), fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
     })
-    addPanel(ad, panelX + px(150), px(676), galleryW - px(174), px(268), PALE_GRAY, 'F1F5F9')
-    const slotGap = px(12)
-    const slotW = px(120)
-    const imageBoxH = px(236)
-    const imageStartX = panelX + px(182)
-    await addMatchedHeightImages(ad, card.images, imageStartX, px(690), slotW, slotGap, imageBoxH)
+    const imageBoxX = panelX + px(150)
+    const imageBoxY = px(676)
+    const imageBoxW = galleryW - px(174)
+    const imageBoxH = px(268)
+    addPanel(ad, imageBoxX, imageBoxY, imageBoxW, imageBoxH, PALE_GRAY, 'F1F5F9')
+    await addMatchedHeightImages(ad, card.images, imageBoxX, imageBoxY, imageBoxW, imageBoxH, cm(0.3), cm(4.35))
   }
 
   const plan = pptx.addSlide()

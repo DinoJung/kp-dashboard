@@ -987,7 +987,7 @@ tfoot td {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 0.3cm;
 }
 
 .report-ad-gallery__slot {
@@ -996,34 +996,17 @@ tfoot td {
   justify-content: center;
 }
 
-.report-ad-gallery__slot--primary {
-  width: 44%;
-  height: 100%;
-}
-
+.report-ad-gallery__slot--primary,
 .report-ad-gallery__slot--secondary {
-  width: 34%;
-  height: 100%;
-}
-
-.report-ad-gallery__frame--traffic .report-ad-gallery__pair {
-  gap: 12px;
-  transform: translate(-28px, -4px);
-}
-
-.report-ad-gallery__frame--traffic .report-ad-gallery__slot--primary {
-  width: 48%;
-}
-
-.report-ad-gallery__frame--traffic .report-ad-gallery__slot--secondary {
-  width: 28%;
-  height: 100%;
+  width: auto;
+  height: auto;
+  flex: 0 0 auto;
 }
 
 .report-ad-gallery__image {
   display: block;
   width: auto;
-  height: 220px;
+  height: 4.35cm;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
