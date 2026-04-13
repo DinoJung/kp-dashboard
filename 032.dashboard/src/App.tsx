@@ -1130,7 +1130,17 @@ function App() {
             </div>
           </div>
           <div className="table-wrap">
-            <table>
+            <table className="report-table-preview report-table-preview--summary">
+              <colgroup>
+                <col />
+                <col style={{ width: '1.95cm' }} />
+                <col style={{ width: '1.95cm' }} />
+                <col style={{ width: '1.95cm' }} />
+                <col style={{ width: '2.26cm' }} />
+                <col style={{ width: '2.26cm' }} />
+                <col style={{ width: '1.95cm' }} />
+                <col style={{ width: '1.95cm' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>월</th>
@@ -1178,7 +1188,7 @@ function App() {
             </button>
           </div>
           <div className="table-wrap">
-            <table>
+            <table className="report-table-preview report-table-preview--promotion">
               <thead>
                 <tr>
                   <th>프로모션</th>

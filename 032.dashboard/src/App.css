@@ -633,6 +633,8 @@ tfoot td {
   gap: 14px;
   flex-wrap: wrap;
   align-items: center;
+  justify-self: center;
+  width: max-content;
 }
 
 .report-step-nav__item {
@@ -770,11 +772,11 @@ tfoot td {
 }
 
 .report-dom-clone__panel--summary table {
-  font-size: 15px;
+  font-size: 11px;
 }
 
 .report-dom-clone__panel--promotion table {
-  font-size: 15px;
+  font-size: 11px;
 }
 
 .report-dom-clone__panel thead th,
@@ -792,6 +794,15 @@ tfoot td {
 .report-dom-clone__panel tfoot td {
   background: #dce6f1;
   font-weight: 700;
+}
+
+.report-dom-clone__panel--summary .report-table-preview--summary thead th:first-child,
+.report-dom-clone__panel--summary .report-table-preview--summary tbody td:first-child {
+  background: #f3f4f6;
+}
+
+.report-dom-clone__panel--summary .report-table-preview--summary thead th:not(:first-child) {
+  background: #fff2cc;
 }
 
 .report-dom-clone__panel .panel__eyebrow {
@@ -936,7 +947,7 @@ tfoot td {
 }
 
 .report-table--ad {
-  font-size: 15px;
+  font-size: 11px;
 }
 
 .report-table-wrap--ad {
