@@ -175,11 +175,6 @@ const supabase: SupabaseClient | null =
   supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 const numberFormatter = new Intl.NumberFormat('ko-KR')
-const currencyFormatter = new Intl.NumberFormat('ko-KR', {
-  style: 'currency',
-  currency: 'KRW',
-  maximumFractionDigits: 0,
-})
 const ratioPercentFormatter = new Intl.NumberFormat('ko-KR', {
   style: 'percent',
   maximumFractionDigits: 1,
@@ -278,7 +273,7 @@ function formatNumber(value: number | null | undefined) {
 
 function formatCurrency(value: number | null | undefined) {
   if (value === null || value === undefined) return '-'
-  return currencyFormatter.format(value)
+  return `₩ ${numberFormatter.format(Math.round(value))}`
 }
 
 function formatRatio(value: number | null | undefined) {

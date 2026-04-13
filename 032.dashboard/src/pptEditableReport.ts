@@ -167,21 +167,24 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
       x: x + px(16), y: y + px(16), w: w - px(28), h: px(18),
       fontFace: FONT_FACE, fontSize: compact ? 8.5 : 9, bold: true, color: BODY_TEXT,
     })
+    const valueY = y + px(compact ? 42 : 44)
+    const deltaY = valueY + px(24) + cm(0.25)
+    const helperY = deltaY + px(14) + cm(0.15)
     slide.addText(card.value, {
-      x: x + px(16), y: y + px(compact ? 42 : 44), w: w - px(28), h: px(24),
+      x: x + px(16), y: valueY, w: w - px(28), h: px(24),
       fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
       align: compact ? 'right' : 'left',
     })
     if (card.delta) {
       slide.addText(card.delta, {
-        x: x + px(16), y: y + px(compact ? 77 : 79), w: w - px(28), h: px(14),
-        fontFace: FONT_FACE, fontSize: 7, bold: true, color: BODY_TEXT,
+        x: x + px(16), y: deltaY, w: w - px(28), h: px(14),
+        fontFace: FONT_FACE, fontSize: 8, bold: true, color: BODY_TEXT,
       })
     }
     if (card.helper) {
       slide.addText(card.helper, {
-        x: x + px(16), y: y + px(compact ? 93 : 97), w: w - px(28), h: px(14),
-        fontFace: FONT_FACE, fontSize: 6.5, color: MUTED_TEXT,
+        x: x + px(16), y: helperY, w: w - px(28), h: px(14),
+        fontFace: FONT_FACE, fontSize: 7, color: MUTED_TEXT,
       })
     }
   }
@@ -291,7 +294,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     x: summaryX + px(26), y: panelsY + px(38), w: summaryW - px(28), h: px(24), fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
   })
   const summaryTableW = summaryW - px(36)
-  const summarySpecifiedColW = [cm(1.95), cm(1.95), cm(1.95), cm(2.26), cm(2.26), cm(1.95), cm(1.95)]
+  const summarySpecifiedColW = [cm(1.85), cm(1.85), cm(1.85), cm(2.5), cm(2.5), cm(1.85), cm(1.85)]
   const summaryMonthColW = Number((summaryTableW - summarySpecifiedColW.reduce((sum, value) => sum + value, 0)).toFixed(4))
   result.addTable(makeTableRows(args.sixMonthTableRows, { headerFill: HEADER_NEUTRAL_FILL, secondRowFill: HEADER_GOLD_FILL }), {
     x: summaryX + px(20), y: panelsY + px(72), w: summaryTableW, h: topPanelH - px(92),
@@ -322,8 +325,8 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   exposure.addText(`더캐리포인트 가입 유도 팝업 | ${args.exposureFirstBusinessDay} 10:00`, {
     x: px(96), y: px(228), w: px(1560), h: px(28), fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
   })
-  exposure.addText('이벤트페이지(KP), 브랜드 홈페이지 메인홈(BP, BPU, IB, KR), 마이페이지(KR)', {
-    x: px(96), y: px(266), w: px(1580), h: px(22), fontFace: FONT_FACE, fontSize: 10, bold: true, color: '4B5563',
+  exposure.addText('이벤트페이지(KP), 브랜드 홈페이지 메인홈(BP, BPU, IB, PK), 마이페이지(KR)', {
+    x: px(96), y: px(266), w: px(1580), h: px(22), fontFace: FONT_FACE, fontSize: 10, color: '4B5563',
   })
   addPanel(exposure, px(96), px(328), px(1728), px(656), 'FFFFFF', 'D1D5DB')
 
