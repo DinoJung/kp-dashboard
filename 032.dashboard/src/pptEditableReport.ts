@@ -1,4 +1,5 @@
 import PptxGenJS from 'pptxgenjs'
+import JSZip from 'jszip'
 
 type MetricCardData = {
   title: string
@@ -52,6 +53,48 @@ const HEADER_NEUTRAL_FILL = 'F3F4F6'
 const HEADER_GOLD_FILL = 'FFF2CC'
 const TOTAL_ROW_FILL = 'D6DCE5'
 const FONT_FACE = 'Pretendard Variable'
+const TRANSPARENT_TEXT_OUTLINE = '<a:ln><a:solidFill><a:srgbClr val="000000"><a:alpha val="0"/></a:srgbClr></a:solidFill><a:prstDash val="solid"/></a:ln>'
+
+function patchThemeFonts(xml: string) {
+  return xml
+    .replace(/<a:latin typeface="[^"]*"\/>/g, `<a:latin typeface="${FONT_FACE}"/>`)
+    .replace(/<a:ea typeface="[^"]*"\/>/g, `<a:ea typeface="${FONT_FACE}"/>`)
+    .replace(/<a:cs typeface="[^"]*"\/>/g, `<a:cs typeface="${FONT_FACE}"/>`)
+}
+
+function patchTextOutline(xml: string) {
+  let patched = xml.replace(/<a:(rPr|defRPr|endParaRPr)([^>/]*)\/>/g, (_m, tag, attrs) => `<a:${tag}${attrs}>${TRANSPARENT_TEXT_OUTLINE}</a:${tag}>`)
+  patched = patched.replace(/<a:(rPr|defRPr|endParaRPr)([^>]*)>/g, (m, tag, attrs) => {
+    if (m.includes('<a:ln')) return m
+    return `<a:${tag}${attrs}>${TRANSPARENT_TEXT_OUTLINE}`
+  })
+  return patched
+}
+
+async function downloadPatchedPptx(fileName: string, blob: Blob) {
+  const zip = await JSZip.loadAsync(await blob.arrayBuffer())
+  const themeFile = zip.file('ppt/theme/theme1.xml')
+  if (themeFile) {
+    const xml = await themeFile.async('string')
+    zip.file('ppt/theme/theme1.xml', patchThemeFonts(xml))
+  }
+  await Promise.all(Object.keys(zip.files).map(async (name) => {
+    if (!/^ppt\/slides\/slide\d+\.xml$/.test(name)) return
+    const file = zip.file(name)
+    if (!file) return
+    const xml = await file.async('string')
+    zip.file(name, patchTextOutline(xml))
+  }))
+  const patchedBlob = await zip.generateAsync({ type: 'blob' })
+  const url = URL.createObjectURL(patchedBlob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
 
 export async function generateEditableReportPpt(args: EditableReportArgs) {
   const pptx = new PptxGenJS()
@@ -429,5 +472,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     })
   }
 
-  await pptx.writeFile({ fileName: `thekary-point-report-${args.reportMonthKey}-editable.pptx` })
+  const fileName = `thekary-point-report-${args.reportMonthKey}-editable.pptx`
+  const blob = await pptx.write({ outputType: 'blob' } as any) as Blob
+  await downloadPatchedPptx(fileName, blob)
 }
