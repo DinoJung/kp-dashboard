@@ -64,6 +64,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   pptx.company = 'Thekary'
   pptx.subject = `Thekary Point ${args.reportMonthKey} editable report`
   pptx.title = `Thekary Point Report ${args.reportMonthKey}`
+  pptx.theme = { headFontFace: FONT_FACE, bodyFontFace: FONT_FACE, lang: 'ko-KR' } as any
 
   async function toDataUrl(src: string) {
     const cached = imageCache.get(src)
@@ -259,18 +260,25 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
 
   const cover = pptx.addSlide()
   cover.background = { color: 'FFFFFF' }
+  const coverGroupTop = px(394)
+  const coverTitleH = px(36)
+  const coverGap1 = px(74)
+  const coverMainH = px(60)
+  const coverGap2 = px(70)
+  const coverMetaH = px(22)
+  const coverGap3 = px(8)
   cover.addText('THEKARY POINT REPORT', {
-    x: px(520), y: px(320), w: px(880), h: px(36), fontFace: FONT_FACE, fontSize: 32, bold: true, align: 'center', color: MUTED_TEXT,
+    x: px(520), y: coverGroupTop, w: px(880), h: coverTitleH, fontFace: FONT_FACE, fontSize: 32, bold: true, align: 'center', color: MUTED_TEXT,
   })
   cover.addText([
     { text: '더캐리포인트 ', options: { color: '9CA3AF' } },
     { text: args.coverTitle, options: { color: ACCENT_AMBER } },
   ], {
-    x: px(420), y: px(430), w: px(1080), h: px(60), margin: 0, fontFace: FONT_FACE, fontSize: 32, bold: true, align: 'center', valign: 'middle',
+    x: px(420), y: coverGroupTop + coverTitleH + coverGap1, w: px(1080), h: coverMainH, margin: 0, fontFace: FONT_FACE, fontSize: 32, bold: true, align: 'center', valign: 'middle',
   })
-  cover.addText('마케팅 2팀', { x: px(760), y: px(560), w: px(400), h: px(22), fontFace: FONT_FACE, fontSize: 12, align: 'center', color: MUTED_TEXT })
-  cover.addText(args.monthEndLabel, { x: px(760), y: px(590), w: px(400), h: px(22), fontFace: FONT_FACE, fontSize: 12, align: 'center', color: MUTED_TEXT })
-  cover.addImage({ data: logoData, x: px(820), y: px(890), w: px(280), h: px(72) })
+  cover.addText('마케팅 2팀', { x: px(760), y: coverGroupTop + coverTitleH + coverGap1 + coverMainH + coverGap2, w: px(400), h: coverMetaH, fontFace: FONT_FACE, fontSize: 12, align: 'center', color: MUTED_TEXT })
+  cover.addText(args.monthEndLabel, { x: px(760), y: coverGroupTop + coverTitleH + coverGap1 + coverMainH + coverGap2 + coverMetaH + coverGap3, w: px(400), h: coverMetaH, fontFace: FONT_FACE, fontSize: 12, align: 'center', color: MUTED_TEXT })
+  cover.addImage({ data: logoData, x: px(862), y: px(911.6), w: px(196), h: px(50.4) })
 
   const result = pptx.addSlide()
   result.background = { color: 'FFFFFF' }
@@ -365,8 +373,15 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
 
   const plan = pptx.addSlide()
   plan.background = { color: 'FFFFFF' }
+  const planGap = px(12)
+  const planHeaderH = px(44)
+  const planBodyH = cm(1.8)
+  const planWeeks = args.nextPlanCalendar ? args.nextPlanCalendar.weeks.length : 5
+  const planPanelH = args.nextPlanCalendar
+    ? (px(318) - px(228)) + planHeaderH + planGap + planWeeks * planBodyH + (planWeeks - 1) * planGap + px(24)
+    : px(724)
   addHeader(plan, `${args.monthLabelKorean} NEXT PLAN`, 'next-plan', logoData)
-  addPanel(plan, px(96), px(228), px(1728), px(724))
+  addPanel(plan, px(96), px(228), px(1728), planPanelH)
   plan.addText('다음달 일정', {
     x: px(122), y: px(250), w: px(680), h: px(16), fontFace: FONT_FACE, fontSize: 7, bold: true, color: ACCENT_AMBER,
   })
@@ -377,12 +392,12 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     const boardX = px(122)
     const boardY = px(318)
     const totalW = px(1676)
-    const gap = px(12)
+    const gap = planGap
     const calendarW = totalW * 0.6
     const weeklyW = totalW * 0.4
     const dayCellW = (calendarW - gap * 6) / 7
-    const headerH = px(44)
-    const bodyH = px(94)
+    const headerH = planHeaderH
+    const bodyH = planBodyH
     args.calendarWeekdays.forEach((weekday, index) => {
       const x = boardX + index * (dayCellW + gap)
       addPanel(plan, x, boardY, dayCellW, headerH, PALE_GRAY, PALE_GRAY)
