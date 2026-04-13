@@ -1,7 +1,7 @@
 # Thekary Point Supabase 세팅 메모
 
 현재 진행 상황
-- 작업 폴더: `/hermes/KP_monthly-report`
+- 작업 폴더: `/10.work/03.KPdash`
 - 스키마 초안 SQL 작성 완료: `thekary_point_supabase_schema.sql`
 - service role key 확인 완료
 - direct `DATABASE_URL`도 확인 완료

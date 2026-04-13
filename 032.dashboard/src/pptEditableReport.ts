@@ -46,6 +46,7 @@ const BODY_TEXT = '111827'
 const MUTED_TEXT = '6B7280'
 const ACCENT_AMBER = 'F59E0B'
 const LIGHT_AMBER = 'FEF3C7'
+const TOTAL_ROW_FILL = 'DCE6F1'
 const FONT_FACE = 'Pretendard Variable'
 
 export async function generateEditableReportPpt(args: EditableReportArgs) {
@@ -130,14 +131,16 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
         fill: { color: step.key === activeStep ? LIGHT_AMBER : 'D1D5DB' },
       })
       slide.addText(step.label, {
-        x: navX - px(4),
-        y: px(175),
-        w: width + px(8),
-        h: px(18),
+        x: navX,
+        y: px(164),
+        w: width,
+        h: px(44),
+        margin: 0,
         fontFace: FONT_FACE,
         fontSize: 9,
         bold: true,
         align: 'center',
+        valign: 'middle',
         color: step.key === activeStep ? BODY_TEXT : 'FFFFFF',
       })
       navX += width + px(14)
@@ -179,39 +182,48 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     }
   }
 
-  function addPanelTitle(slide: PptxGenJS.Slide, eyebrow: string, title: string, x: number, y: number, w: number) {
+  function addPanelTitle(slide: PptxGenJS.Slide, eyebrow: string, title: string, x: number, y: number, w: number, eyebrowSize = 8, titleSize = 14) {
     if (eyebrow) {
-      slide.addText(eyebrow, { x, y, w: w + px(24), h: px(16), fontFace: FONT_FACE, fontSize: 8, bold: true, color: ACCENT_AMBER })
+      slide.addText(eyebrow, { x, y, w: w + px(24), h: px(16), fontFace: FONT_FACE, fontSize: eyebrowSize, bold: true, color: ACCENT_AMBER })
     }
-    slide.addText(title, { x, y: y + px(18), w: w + px(24), h: px(24), fontFace: FONT_FACE, fontSize: 14, bold: true, color: BODY_TEXT })
+    slide.addText(title, { x, y: y + px(18), w: w + px(24), h: px(24), fontFace: FONT_FACE, fontSize: titleSize, bold: true, color: BODY_TEXT })
   }
 
   function makeTableRows(rows: TableRows, headerFill = 'F3F4F6'): any {
-    return rows.map((row, rowIndex) =>
-      row.map((text) => ({
+    return rows.map((row, rowIndex) => {
+      const isHeader = rowIndex === 0
+      const isTotalRow = row[0] === 'Total'
+      return row.map((text) => ({
         text,
-        options: rowIndex === 0
-          ? { bold: true, fill: { color: headerFill }, align: 'center' }
-          : text === 'Total'
-            ? { bold: true }
-            : {},
-      })),
-    ) as any
+        options: isHeader
+          ? { bold: true, fill: { color: headerFill }, align: 'center', valign: 'middle' }
+          : isTotalRow
+            ? { bold: true, fill: { color: TOTAL_ROW_FILL }, align: 'center', valign: 'middle' }
+            : { align: 'center', valign: 'middle' },
+      }))
+    }) as any
   }
 
-  async function addContainedImage(slide: PptxGenJS.Slide, src: string, x: number, y: number, w: number, h: number) {
-    const data = await toDataUrl(src)
-    const size = await getImageSize(src)
-    const imageRatio = size.width / size.height
-    const boxRatio = w / h
-    let drawW = w
-    let drawH = h
-    if (imageRatio > boxRatio) {
-      drawH = w / imageRatio
-    } else {
-      drawW = h * imageRatio
+  async function addMatchedHeightImages(slide: PptxGenJS.Slide, sources: string[], slotX: number, slotY: number, slotW: number, slotGap: number, imageBoxH: number) {
+    const validSources = sources.filter(Boolean).slice(0, 2)
+    if (!validSources.length) return
+
+    const sizes = await Promise.all(validSources.map((src) => getImageSize(src)))
+    const maxSharedHeight = Math.min(
+      imageBoxH,
+      ...sizes.map((size) => slotW / (size.width / size.height)),
+    )
+
+    for (const [index, src] of validSources.entries()) {
+      const data = await toDataUrl(src)
+      const size = sizes[index]
+      const imageRatio = size.width / size.height
+      const drawH = maxSharedHeight
+      const drawW = drawH * imageRatio
+      const x = slotX + index * (slotW + slotGap) + (slotW - drawW) / 2
+      const y = slotY + (imageBoxH - drawH) / 2
+      slide.addImage({ data, x, y, w: drawW, h: drawH })
     }
-    slide.addImage({ data, x: x + (w - drawW) / 2, y: y + (h - drawH) / 2, w: drawW, h: drawH })
   }
 
   const logoData = await toDataUrl(args.logoSrc)
@@ -222,10 +234,10 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     x: px(520), y: px(320), w: px(880), h: px(36), fontFace: FONT_FACE, fontSize: 32, bold: true, align: 'center', color: MUTED_TEXT,
   })
   cover.addText('더캐리포인트', {
-    x: px(420), y: px(430), w: px(450), h: px(60), fontFace: FONT_FACE, fontSize: 32, bold: true, align: 'right', color: '9CA3AF',
+    x: px(410), y: px(430), w: px(450), h: px(60), fontFace: FONT_FACE, fontSize: 32, bold: true, align: 'right', color: '9CA3AF',
   })
   cover.addText(args.coverTitle, {
-    x: px(890), y: px(430), w: px(650), h: px(60), fontFace: FONT_FACE, fontSize: 32, bold: true, color: ACCENT_AMBER,
+    x: px(860), y: px(430), w: px(650), h: px(60), fontFace: FONT_FACE, fontSize: 32, bold: true, color: ACCENT_AMBER,
   })
   cover.addText('마케팅 2팀', { x: px(760), y: px(560), w: px(400), h: px(22), fontFace: FONT_FACE, fontSize: 12, align: 'center', color: MUTED_TEXT })
   cover.addText(args.monthEndLabel, { x: px(760), y: px(590), w: px(400), h: px(22), fontFace: FONT_FACE, fontSize: 12, align: 'center', color: MUTED_TEXT })
@@ -251,8 +263,8 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   })
   result.addTable(makeTableRows(args.sixMonthTableRows), {
     x: summaryX + px(20), y: panelsY + px(72), w: summaryW - px(36), h: panelH - px(92),
-    fontFace: FONT_FACE, fontSize: 6.5, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
-    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(48), autoFit: false, align: 'center',
+    fontFace: FONT_FACE, fontSize: 8, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
+    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(48), autoFit: false, align: 'center', valign: 'middle',
   } as any)
   addPanel(result, promotionX, panelsY, promotionW, panelH)
   result.addText('프로모션', {
@@ -263,8 +275,8 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   })
   result.addTable(makeTableRows(args.promotionRows), {
     x: promotionX + px(20), y: panelsY + px(72), w: promotionW - px(36), h: panelH - px(92),
-    fontFace: FONT_FACE, fontSize: 6.5, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
-    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(44), autoFit: false, align: 'center',
+    fontFace: FONT_FACE, fontSize: 8, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
+    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(44), autoFit: false, align: 'center', valign: 'middle',
   } as any)
 
   const exposure = pptx.addSlide()
@@ -287,11 +299,11 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     addMetricCard(ad, card, px(96) + index * (adMetricW + adMetricGap), px(220), adMetricW, px(92), true)
   })
   addPanel(ad, px(96), px(330), px(1728), px(310))
-  addPanelTitle(ad, '광고 상세', 'META 캠페인 성과', px(122), px(350), px(400))
+  addPanelTitle(ad, '광고상세', 'META 캠페인 성과', px(122), px(350), px(400), 7, 12)
   ad.addTable(makeTableRows(args.campaignRows), {
     x: px(114), y: px(400), w: px(1692), h: px(218),
-    fontFace: FONT_FACE, fontSize: 7, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
-    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(44), autoFit: false, align: 'center',
+    fontFace: FONT_FACE, fontSize: 8, color: BODY_TEXT, border: { color: PANEL_LINE, pt: 1 },
+    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(44), autoFit: false, align: 'center', valign: 'middle',
   } as any)
   const galleryW = px((1728 - 16) / 2)
   for (const [index, card] of args.adSourceCards.entries()) {
@@ -308,12 +320,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     const slotW = px(120)
     const imageBoxH = px(236)
     const imageStartX = panelX + px(182)
-    if (card.images[0]) {
-      await addContainedImage(ad, card.images[0], imageStartX, px(690), slotW, imageBoxH)
-    }
-    if (card.images[1]) {
-      await addContainedImage(ad, card.images[1], imageStartX + slotW + slotGap, px(690), slotW, imageBoxH)
-    }
+    await addMatchedHeightImages(ad, card.images, imageStartX, px(690), slotW, slotGap, imageBoxH)
   }
 
   const plan = pptx.addSlide()

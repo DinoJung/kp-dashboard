@@ -1,0 +1,7 @@
+﻿sheet_name,purpose,grain,required_columns
+raw_member,회원/앱다운로드 일별 원본,daily,"report_date, member_count, app_downloads"
+raw_event,포인트 프로모션 월별 상세,monthly detail,"report_month, promotion_type, point_amount, participant_count, total_points_issued"
+raw_ad,META 광고 월별 상세,monthly detail,"report_month, placement_name, campaign_goal, impressions, clicks, revenue, ad_spend_markup_vat_exclusive"
+raw_optin,월별 수신동의수,monthly,"report_month, sms_opt_in_members, push_opt_in_members"
+daily_activity,일별 DAU,daily,"report_date, dau"
+monthly_activity,월별 MAU,monthly,"report_month, mau"

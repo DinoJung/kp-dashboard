@@ -11,7 +11,7 @@ from xml.etree import ElementTree as ET
 import psycopg
 from dotenv import dotenv_values
 
-ROOT = Path('/home/j1nu/workspace/hermes/KP_monthly-report')
+ROOT = Path('/home/j1nu/workspace/10.work/03.KPdash')
 ENV_PATH = ROOT / '.env'
 XLSX_PATH = Path('/home/j1nu/.hermes/cache/documents/doc_fe6fe4b8bab8_2026_thekarypoint_totaldata.xlsx')
 SCHEMA = 'thekary_point'

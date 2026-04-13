@@ -17,7 +17,7 @@ React + TypeScript + Vite 기반 월간 성과 대시보드야.
 ## 실행
 
 ```bash
-cd /home/j1nu/workspace/hermes/KP_monthly-report/dashboard
+cd /home/j1nu/workspace/10.work/03.KPdash/032.dashboard
 npm install
 npm run dev
 ```
@@ -44,7 +44,7 @@ VITE_SOURCE_SHEET_URL=https://docs.google.com/spreadsheets/d/.../edit#gid=0
 - `public.dashboard_member_daily`
 
 정의 파일
-- `/home/j1nu/workspace/hermes/KP_monthly-report/dashboard/dashboard_public_views.sql`
+- `/home/j1nu/workspace/10.work/03.KPdash/032.dashboard_public_views.sql`
 
 ## Vercel 배포 메모
 
@@ -65,11 +65,11 @@ Vercel 설정 파일
 - https://docs.google.com/spreadsheets/d/1bALRM_uxx4UbVdjIDuk8JE5-hGp1rjyy0Xuf3gHS8gQ/edit
 
 동기화 스크립트
-- `/hermes/KP_monthly-report/sync_google_sheets_to_supabase.py`
+- `/10.work/03.KPdash/031.data/sync_google_sheets_to_supabase.py`
 
 사용 예시
 ```bash
-cd /hermes/KP_monthly-report
+cd /10.work/03.KPdash
 .venv/bin/python sync_google_sheets_to_supabase.py --dry-run
 .venv/bin/python sync_google_sheets_to_supabase.py
 ```

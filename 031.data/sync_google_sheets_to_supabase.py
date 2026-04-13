@@ -12,7 +12,7 @@ from typing import Any
 import psycopg
 from dotenv import dotenv_values
 
-ROOT = Path('/home/j1nu/workspace/hermes/KP_monthly-report')
+ROOT = Path('/home/j1nu/workspace/10.work/03.KPdash')
 ENV_PATH = ROOT / '.env'
 SCHEMA = 'thekary_point'
 SPREADSHEET_ID = '1bALRM_uxx4UbVdjIDuk8JE5-hGp1rjyy0Xuf3gHS8gQ'
@@ -327,7 +327,7 @@ def run_sync(spreadsheet_id: str, dry_run: bool) -> None:
     if dry_run:
         return
     if not db_url:
-        raise RuntimeError('DATABASE_URL is missing in /hermes/KP_monthly-report/.env')
+        raise RuntimeError('DATABASE_URL is missing in /10.work/03.KPdash/.env')
 
     member_dates = sorted({row['report_date'] for row in payloads['member_raw']})
     event_months = sorted({row['report_month'] for row in payloads['event_raw']})
