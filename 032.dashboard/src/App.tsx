@@ -1033,17 +1033,7 @@ function App() {
                     setIsReportConfirmOpen(true)
                   }}
                 >
-                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'pdf' ? 'PDF 리포트 생성 중…' : 'PDF 리포트 만들기'}
-                </button>
-                <button
-                  className="settings-menu__item"
-                  type="button"
-                  onClick={() => {
-                    setReportExportMode('ppt')
-                    setIsReportConfirmOpen(true)
-                  }}
-                >
-                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'ppt' ? 'PPT 리포트 생성 중…' : 'PPT 리포트 만들기'}
+                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'pdf' ? 'PDF 리포트 생성 중…' : 'PDF 리포트 생성'}
                 </button>
                 <button
                   className="settings-menu__item"
@@ -1053,7 +1043,7 @@ function App() {
                     setIsReportConfirmOpen(true)
                   }}
                 >
-                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'ppt2' ? 'PPT 리포트 만들기 2 생성 중…' : 'PPT 리포트 만들기 2'}
+                  <FileText size={16} /> {isGeneratingReport && reportExportMode === 'ppt2' ? 'PPT 리포트 생성 중…' : 'PPT 리포트 생성'}
                 </button>
               </div>
             ) : null}
@@ -1130,17 +1120,7 @@ function App() {
             </div>
           </div>
           <div className="table-wrap">
-            <table className="report-table-preview report-table-preview--summary">
-              <colgroup>
-                <col />
-                <col style={{ width: '1.95cm' }} />
-                <col style={{ width: '1.95cm' }} />
-                <col style={{ width: '1.95cm' }} />
-                <col style={{ width: '2.26cm' }} />
-                <col style={{ width: '2.26cm' }} />
-                <col style={{ width: '1.95cm' }} />
-                <col style={{ width: '1.95cm' }} />
-              </colgroup>
+            <table>
               <thead>
                 <tr>
                   <th>월</th>
@@ -1188,7 +1168,7 @@ function App() {
             </button>
           </div>
           <div className="table-wrap">
-            <table className="report-table-preview report-table-preview--promotion">
+            <table>
               <thead>
                 <tr>
                   <th>프로모션</th>
@@ -1327,17 +1307,13 @@ function App() {
           <div className="confirm-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
             <h2>
               {reportExportMode === 'pdf'
-                ? 'PDF 리포트 만들기'
-                : reportExportMode === 'ppt'
-                  ? 'PPT 리포트 만들기'
-                  : 'PPT 리포트 만들기 2'}
+                ? 'PDF 리포트 생성'
+                : 'PPT 리포트 생성'}
             </h2>
             <p>
               {reportExportMode === 'pdf'
                 ? `${monthLabelKorean(currentRow.report_month)} 기준 PDF 리포트를 생성합니다.`
-                : reportExportMode === 'ppt'
-                  ? `${monthLabelKorean(currentRow.report_month)} 기준 PPT 리포트를 생성합니다.`
-                  : `${monthLabelKorean(currentRow.report_month)} 기준 편집형 PPT 리포트를 생성합니다.`}
+                : `${monthLabelKorean(currentRow.report_month)} 기준 PPT 리포트를 생성합니다.`}
             </p>
             <div className="confirm-modal__actions">
               <button className="ghost-button" type="button" onClick={() => setIsReportConfirmOpen(false)}>
