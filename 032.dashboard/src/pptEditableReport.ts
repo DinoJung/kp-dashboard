@@ -257,6 +257,75 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     }
   }
 
+  function addWeeklySchedulePlaceholder(slide: PptxGenJS.Slide, weekIndex: number, x: number, y: number, w: number, h: number) {
+    const chipH = px(18)
+    const chipW = px(96)
+    const noteW = px(116)
+    const gapY = px(8)
+    const arrowGap = px(8)
+    const totalStackH = chipH * 3 + gapY * 2
+    const startY = y + Math.max(0, (h - totalStackH) / 2)
+    const colors = [
+      { fill: 'DBEAFE', border: '93C5FD', arrow: '60A5FA' },
+      { fill: 'DCFCE7', border: '86EFAC', arrow: '4ADE80' },
+      { fill: 'FFEDD5', border: 'FDBA74', arrow: 'FB923C' },
+    ]
+
+    if (weekIndex === 0 || weekIndex === 4) {
+      colors.forEach((color, index) => {
+        const rowY = startY + index * (chipH + gapY)
+        const arrowW = w - chipW - arrowGap - px(12)
+        if (weekIndex === 0) {
+          slide.addShape(roundRect, {
+            x: x + px(6), y: rowY, w: chipW, h: chipH, rectRadius: 0.08,
+            line: { color: color.border, width: 1 }, fill: { color: color.fill },
+          })
+          slide.addText(' ', {
+            x: x + px(6), y: rowY, w: chipW, h: chipH, margin: 0,
+            fontFace: FONT_FACE, fontSize: 10, align: 'center', valign: 'middle', color: BODY_TEXT,
+          })
+          slide.addShape(pptx.ShapeType.line, {
+            x: x + px(6) + chipW + arrowGap,
+            y: rowY + chipH / 2,
+            w: Math.max(px(18), arrowW),
+            h: 0,
+            line: { color: color.arrow, width: 1.5, beginArrowType: 'none', endArrowType: 'triangle' },
+          })
+        } else {
+          slide.addShape(pptx.ShapeType.line, {
+            x: x + px(6),
+            y: rowY + chipH / 2,
+            w: Math.max(px(18), arrowW),
+            h: 0,
+            line: { color: color.arrow, width: 1.5, beginArrowType: 'triangle', endArrowType: 'none' },
+          })
+          slide.addShape(roundRect, {
+            x: x + w - chipW - px(6), y: rowY, w: chipW, h: chipH, rectRadius: 0.08,
+            line: { color: color.border, width: 1 }, fill: { color: color.fill },
+          })
+          slide.addText(' ', {
+            x: x + w - chipW - px(6), y: rowY, w: chipW, h: chipH, margin: 0,
+            fontFace: FONT_FACE, fontSize: 10, align: 'center', valign: 'middle', color: BODY_TEXT,
+          })
+        }
+      })
+      return
+    }
+
+    if (weekIndex === 3) {
+      const noteX = x + (w - noteW) / 2
+      const noteY = y + (h - chipH) / 2
+      slide.addShape(roundRect, {
+        x: noteX, y: noteY, w: noteW, h: chipH, rectRadius: 0.08,
+        line: { color: 'FCD34D', width: 1 }, fill: { color: 'FEF3C7' },
+      })
+      slide.addText(' ', {
+        x: noteX, y: noteY, w: noteW, h: chipH, margin: 0,
+        fontFace: FONT_FACE, fontSize: 10, align: 'center', valign: 'middle', color: BODY_TEXT,
+      })
+    }
+  }
+
   const logoData = await toDataUrl(args.logoSrc)
 
   const cover = pptx.addSlide()
@@ -322,7 +391,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     x: promotionX + px(10), y: panelsY + px(64), w: promotionW - px(20), h: topPanelH - px(74),
     colW: [cm(2.35), cm(1.65), cm(2.12), cm(2.12), cm(2.12), cm(1.65)],
     fontFace: FONT_FACE, fontSize: 8, color: BODY_TEXT, border: { color: TABLE_BORDER, pt: 1 },
-    fill: { color: 'FFFFFF' }, margin: 0.015, rowH: px(39), autoFit: false, align: 'center', valign: 'middle',
+    fill: { color: 'FFFFFF' }, margin: 0.015, rowH: cm(0.85), autoFit: false, align: 'center', valign: 'middle',
   } as any)
   addPanel(result, px(96), analysisY, px(1728), analysisH)
   result.addText('결과분석', {
@@ -428,6 +497,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
         }
       })
       addPanel(plan, boardX + calendarW + gap, rowY, weeklyW - gap, bodyH, 'FFFFFF', PANEL_LINE)
+      addWeeklySchedulePlaceholder(plan, weekIndex, boardX + calendarW + gap, rowY, weeklyW - gap, bodyH)
     })
   }
 

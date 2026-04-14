@@ -749,6 +749,56 @@ function App() {
   const exposureFirstBusinessDay = currentRow ? getFirstBusinessDayLabel(currentRow.report_month) : ''
   const calendarWeekdays = ['일', '월', '화', '수', '목', '금', '토']
 
+  function renderWeeklySchedulePlaceholder(weekIndex: number) {
+    if (weekIndex === 0) {
+      return (
+        <div className="report-weekly-placeholder report-weekly-placeholder--start" aria-hidden="true">
+          <div className="report-weekly-placeholder__row">
+            <div className="report-weekly-placeholder__chip report-weekly-placeholder__chip--blue"><span>&nbsp;</span></div>
+            <div className="report-weekly-placeholder__arrow report-weekly-placeholder__arrow--blue" />
+          </div>
+          <div className="report-weekly-placeholder__row">
+            <div className="report-weekly-placeholder__chip report-weekly-placeholder__chip--green"><span>&nbsp;</span></div>
+            <div className="report-weekly-placeholder__arrow report-weekly-placeholder__arrow--green" />
+          </div>
+          <div className="report-weekly-placeholder__row">
+            <div className="report-weekly-placeholder__chip report-weekly-placeholder__chip--orange"><span>&nbsp;</span></div>
+            <div className="report-weekly-placeholder__arrow report-weekly-placeholder__arrow--orange" />
+          </div>
+        </div>
+      )
+    }
+
+    if (weekIndex === 3) {
+      return (
+        <div className="report-weekly-placeholder report-weekly-placeholder--note" aria-hidden="true">
+          <div className="report-weekly-placeholder__note"><span>&nbsp;</span></div>
+        </div>
+      )
+    }
+
+    if (weekIndex === 4) {
+      return (
+        <div className="report-weekly-placeholder report-weekly-placeholder--end" aria-hidden="true">
+          <div className="report-weekly-placeholder__row report-weekly-placeholder__row--reverse">
+            <div className="report-weekly-placeholder__arrow report-weekly-placeholder__arrow--blue report-weekly-placeholder__arrow--left" />
+            <div className="report-weekly-placeholder__chip report-weekly-placeholder__chip--blue"><span>&nbsp;</span></div>
+          </div>
+          <div className="report-weekly-placeholder__row report-weekly-placeholder__row--reverse">
+            <div className="report-weekly-placeholder__arrow report-weekly-placeholder__arrow--green report-weekly-placeholder__arrow--left" />
+            <div className="report-weekly-placeholder__chip report-weekly-placeholder__chip--green"><span>&nbsp;</span></div>
+          </div>
+          <div className="report-weekly-placeholder__row report-weekly-placeholder__row--reverse">
+            <div className="report-weekly-placeholder__arrow report-weekly-placeholder__arrow--orange report-weekly-placeholder__arrow--left" />
+            <div className="report-weekly-placeholder__chip report-weekly-placeholder__chip--orange"><span>&nbsp;</span></div>
+          </div>
+        </div>
+      )
+    }
+
+    return null
+  }
+
   const chartData = useMemo(
     () =>
       latestSixMonths.map((row) => ({
@@ -1699,7 +1749,7 @@ function App() {
                               </div>
                             )
                           })}
-                          <div className="report-weekly-item" />
+                          <div className="report-weekly-item">{renderWeeklySchedulePlaceholder(weekIndex)}</div>
                         </div>
                       ))}
                     </div>
