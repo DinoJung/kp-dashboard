@@ -123,6 +123,13 @@ type DashboardPayload = {
   activityDaily: ActivityDailyRow[]
 }
 
+type InsightContent = {
+  status: 'collecting' | 'ready'
+  collectedThrough: string | null
+  resultAnalysis: string[]
+  improvementPlan: string[]
+}
+
 type MetricCardProps = {
   title: string
   value: string
@@ -169,6 +176,20 @@ const REPORT_AD_IMAGES: Record<string, Array<{ label: string; images: string[] }
     { label: '트래픽', images: ['/report-ad/2026-04-traffic-1.jpg', '/report-ad/2026-04-traffic-2.jpg'] },
     { label: '구매전환', images: ['/report-ad/2026-04-purchase-1.jpg', '/report-ad/2026-04-purchase-2.jpg'] },
   ],
+}
+
+const MONTHLY_INSIGHT_OVERRIDES: Record<string, Pick<InsightContent, 'resultAnalysis' | 'improvementPlan'>> = {
+  '2026-03': {
+    resultAnalysis: [
+      '봄피크닉 및 앱 다운로드 프로모션을 바탕으로 신규가입 5,825명, 앱다운로드 2,123건을 확보하며 전월 대비 유입 규모가 확대되었습니다.',
+      '프로모션 참여자는 2,719명, 총 지급 포인트는 893.9만P로 운영 규모는 커졌지만 사용률은 31.1%로 전월 대비 하락해 적립 이후 사용 전환 관리가 추가로 필요합니다.',
+      'META 캠페인은 광고비 154.4만 원 수준을 유지한 가운데 CTR 3.49%, 광고 기여매출 1.05억 원, ROAS 67.7로 효율이 개선되었고 구매전환 캠페인이 성과를 주도했습니다.',
+    ],
+    improvementPlan: [
+      '유입 이후 실제 포인트 사용까지 이어질 수 있도록 적립 직후 사용처 안내와 혜택 소진 유도 메시지를 강화합니다.',
+      'META는 구매전환 중심 운영 기조를 유지하되 트래픽 캠페인은 도달·리마케팅 역할을 분리해 반복 노출을 관리하고 효율 저하를 방지합니다.',
+    ],
+  },
 }
 
 const supabase: SupabaseClient | null =
@@ -301,12 +322,6 @@ function summarizeChange(current: number | null | undefined, previous: number | 
   return `전월 대비 ${formatSigned(delta, unit)}`
 }
 
-function achievementText(current: number | null | undefined, target: number) {
-  if (current === null || current === undefined) return `목표 ${formatNumber(target)} 기준 데이터 없음`
-  const ratio = current / target
-  return `${formatNumber(current)} / ${formatNumber(target)} (${ratioPercentFormatter.format(ratio)})`
-}
-
 function achievementRatio(current: number | null | undefined, target: number) {
   if (current === null || current === undefined) return '-'
   return ratioPercentFormatter.format(current / target)
@@ -317,6 +332,35 @@ function monthlyAverageDau(rows: ActivityDailyRow[], reportMonth: string) {
   if (!monthlyRows.length) return null
   const sum = monthlyRows.reduce((accumulator, row) => accumulator + (row.dau ?? 0), 0)
   return Math.round(sum / monthlyRows.length)
+}
+
+function getMonthLastDay(reportMonth: string) {
+  const [yearText, monthText] = reportMonth.split('-')
+  return new Date(Number(yearText), Number(monthText), 0).getDate()
+}
+
+function getLatestCollectedDate(rows: DailyMemberRow[], reportMonth: string) {
+  const validRows = rows.filter((row) => {
+    if (row.report_month !== reportMonth) return false
+    return [row.member_count, row.app_downloads, row.withdrawals, row.cumulative_conversion, row.active_members].some(
+      (value) => value !== null,
+    ) || (row.net_growth !== null && row.net_growth !== 0)
+  })
+
+  if (!validRows.length) return null
+  return validRows.reduce((latest, row) => (row.report_date > latest ? row.report_date : latest), validRows[0].report_date)
+}
+
+function isMonthEndInsightReady(rows: DailyMemberRow[], reportMonth: string) {
+  const latestCollectedDate = getLatestCollectedDate(rows, reportMonth)
+  if (!latestCollectedDate) return false
+  return Number(latestCollectedDate.slice(8, 10)) === getMonthLastDay(reportMonth)
+}
+
+function formatCollectedThrough(dateText: string | null) {
+  if (!dateText) return '데이터 수집중'
+  const [, monthText, dayText] = dateText.split('-')
+  return `${Number(monthText)}월 ${Number(dayText)}일 기준`
 }
 
 function summarizePercentChange(current: number | null | undefined, previous: number | null | undefined) {
@@ -697,16 +741,59 @@ function App() {
     [latestSixMonths],
   )
 
-  const insightItems = useMemo(() => {
-    if (!currentRow) return []
+  const insightContent = useMemo<InsightContent>(() => {
+    if (!currentRow) {
+      return {
+        status: 'collecting',
+        collectedThrough: null,
+        resultAnalysis: [],
+        improvementPlan: [],
+      }
+    }
 
-    return [
-      `${monthLabel(currentRow.report_month)} 누적 가입자는 ${formatNumber(cumulativeNetMembers)}명으로 ${achievementText(cumulativeNetMembers, MEMBER_TARGET_2026)} 상태.`,
-      `앱다운로드는 ${formatNumber(currentRow.app_downloads)}건, 누적 기준은 ${achievementText(cumulativeAppDownloads, APP_DOWNLOAD_TARGET_2026)}.`,
-      `포인트 연계매출은 ${formatCurrency(currentRow.linked_sales_amount)}이며 광고 기여매출은 ${formatCurrency(currentRow.ad_revenue)}.`,
-      `MAU는 ${formatNumber(currentMau)}명, DAU는 ${currentAverageDau ? `${formatNumber(currentAverageDau)}명` : '집계 없음'}으로 표시했어. DAU는 월평균 기준이며 2026-02-24부터 제공된 일별 실데이터를 사용해.`,
+    const monthKey = monthLabel(currentRow.report_month)
+    const memberDailyRows = data?.memberDaily ?? []
+    const collectedThrough = getLatestCollectedDate(memberDailyRows, currentRow.report_month)
+
+    if (!isMonthEndInsightReady(memberDailyRows, currentRow.report_month)) {
+      return {
+        status: 'collecting',
+        collectedThrough,
+        resultAnalysis: [],
+        improvementPlan: [],
+      }
+    }
+
+    const override = MONTHLY_INSIGHT_OVERRIDES[monthKey]
+    if (override) {
+      return {
+        status: 'ready',
+        collectedThrough,
+        resultAnalysis: override.resultAnalysis,
+        improvementPlan: override.improvementPlan,
+      }
+    }
+
+    const resultAnalysis = [
+      `신규가입 ${formatNumber(currentRow.new_members)}명, 앱다운로드 ${formatNumber(currentRow.app_downloads)}건으로 유입 흐름을 확인했으며 각각 ${summarizeChange(currentRow.new_members, previousRow?.new_members, '명')}, ${summarizeChange(currentRow.app_downloads, previousRow?.app_downloads, '건')}입니다.`,
+      `포인트 운영은 참여자 ${formatNumber(currentRow.event_participant_count)}명, 총 지급 ${formatNumber(currentRow.total_points_issued)}P, 사용률 ${formatRatio(currentRow.point_usage_rate)} 기준으로 집계되었습니다.`,
+      `광고 성과는 광고 기여매출 ${formatCurrency(currentRow.ad_revenue)}, 광고비 ${formatCurrency(currentRow.ad_spend_markup_vat_exclusive)}, ROAS ${formatRoasPercent(currentRow.roas_markup_vat_exclusive)}이며 DAU는 월평균 ${currentAverageDau ? `${formatNumber(currentAverageDau)}명` : '집계 없음'}입니다.`,
     ]
-  }, [cumulativeAppDownloads, cumulativeNetMembers, currentAverageDau, currentMau, currentRow])
+
+    const improvementPlan = [
+      '유입 이후 실제 포인트 사용과 구매 전환까지 이어질 수 있도록 적립 직후 사용 유도 메시지와 랜딩 동선을 함께 점검합니다.',
+      campaignsForMonth.some((row) => (row.placement_name ?? '').includes('TR'))
+        ? '광고는 구매전환 캠페인을 중심으로 유지하고 트래픽 캠페인은 도달·리마케팅 역할을 분리해 반복 노출을 관리합니다.'
+        : '광고는 성과가 확인된 캠페인 구조를 유지하되 예산 변동 시 전환 효율이 먼저 흔들리지 않도록 우선순위를 관리합니다.',
+    ]
+
+    return {
+      status: 'ready',
+      collectedThrough,
+      resultAnalysis,
+      improvementPlan,
+    }
+  }, [campaignsForMonth, currentAverageDau, currentRow, data?.memberDaily, previousRow])
 
   async function captureReportPage(element: HTMLDivElement | null) {
     if (!element) throw new Error('리포트 페이지를 찾을 수 없습니다.')
@@ -1245,15 +1332,39 @@ function App() {
         <article className="panel panel--wide">
           <div className="panel__header">
             <div>
-              <p className="panel__eyebrow">자동 요약</p>
+              <p className="panel__eyebrow">월 마감 요약</p>
               <h2>결과 인사이트</h2>
             </div>
           </div>
-          <ul className="insight-list">
-            {insightItems.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+          {insightContent.status === 'collecting' ? (
+            <div className="insight-empty-state">
+              <strong>데이터 수집중</strong>
+              <p>
+                {monthLabelKorean(currentRow.report_month)} 결과 인사이트는 말일 데이터가 모두 채워진 뒤 업데이트됩니다.
+                현재 반영 기준은 {formatCollectedThrough(insightContent.collectedThrough)}입니다.
+              </p>
+            </div>
+          ) : (
+            <div className="insight-flow">
+              <section className="insight-card">
+                <div className="insight-card__title">결과 분석</div>
+                <ul className="insight-list">
+                  {insightContent.resultAnalysis.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+              <div className="insight-flow__arrow" aria-hidden="true">→</div>
+              <section className="insight-card">
+                <div className="insight-card__title">개선안</div>
+                <ul className="insight-list">
+                  {insightContent.improvementPlan.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          )}
         </article>
 
         <article className="panel panel--wide">
