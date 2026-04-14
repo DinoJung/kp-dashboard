@@ -52,6 +52,8 @@ const HEADER_NEUTRAL_FILL = 'F3F4F6'
 const HEADER_GOLD_FILL = 'FFF2CC'
 const TOTAL_ROW_FILL = 'D6DCE5'
 const FONT_FACE = 'Pretendard Variable'
+const REPORT_LOGO_WIDTH_CM = 3.2
+const REPORT_LOGO_HEIGHT_CM = (3.2 * 50.4) / 196
 
 
 export async function generateEditableReportPpt(args: EditableReportArgs) {
@@ -151,7 +153,13 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
       })
       navX += width + px(14)
     })
-    slide.addImage({ data: logoData, x: px(1692), y: px(54), w: px(156), h: px(48) })
+    slide.addImage({
+      data: logoData,
+      x: 13.333 - cm(REPORT_LOGO_WIDTH_CM) - px(72),
+      y: px(54),
+      w: cm(REPORT_LOGO_WIDTH_CM),
+      h: cm(REPORT_LOGO_HEIGHT_CM),
+    })
   }
 
   function addMetricCard(slide: PptxGenJS.Slide, card: MetricCardData, x: number, y: number, w: number, h: number, compact = false) {
@@ -348,7 +356,13 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   })
   cover.addText('마케팅 2팀', { x: px(760), y: coverGroupTop + coverTitleH + coverGap1 + coverMainH + coverGap2, w: px(400), h: coverMetaH, fontFace: FONT_FACE, fontSize: 12, align: 'center', color: MUTED_TEXT })
   cover.addText(args.monthEndLabel, { x: px(760), y: coverGroupTop + coverTitleH + coverGap1 + coverMainH + coverGap2 + coverMetaH + coverGap3, w: px(400), h: coverMetaH, fontFace: FONT_FACE, fontSize: 12, align: 'center', color: MUTED_TEXT })
-  cover.addImage({ data: logoData, x: px(862), y: px(911.6), w: px(196), h: px(50.4) })
+  cover.addImage({
+    data: logoData,
+    x: (13.333 - cm(REPORT_LOGO_WIDTH_CM)) / 2,
+    y: px(911.6),
+    w: cm(REPORT_LOGO_WIDTH_CM),
+    h: cm(REPORT_LOGO_HEIGHT_CM),
+  })
 
   const result = pptx.addSlide()
   result.background = { color: 'FFFFFF' }
