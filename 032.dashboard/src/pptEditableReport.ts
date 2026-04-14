@@ -320,8 +320,9 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   })
   result.addTable(makeTableRows(args.promotionRows, { headerFill: HEADER_NEUTRAL_FILL, totalRowFill: TOTAL_ROW_FILL }), {
     x: promotionX + px(20), y: panelsY + px(72), w: promotionW - px(36), h: topPanelH - px(92),
-    fontFace: FONT_FACE, fontSize: 8, color: BODY_TEXT, border: { color: TABLE_BORDER, pt: 1 },
-    fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(44), autoFit: false, align: 'center', valign: 'middle',
+    colW: [cm(2.15), cm(1.2), cm(1.45), cm(1.35), cm(1.35), cm(0.95)],
+    fontFace: FONT_FACE, fontSize: 7, color: BODY_TEXT, border: { color: TABLE_BORDER, pt: 1 },
+    fill: { color: 'FFFFFF' }, margin: 0.02, rowH: px(44), autoFit: false, align: 'center', valign: 'middle',
   } as any)
   addPanel(result, px(96), analysisY, px(1728), analysisH)
   result.addText('결과분석', {

@@ -613,6 +613,8 @@ function App() {
         promotion_type: row.promotion_type,
         participant_count: row.participant_count,
         total_points_issued: row.total_points_issued,
+        points_used: row.points_used,
+        point_usage_rate: row.point_usage_rate,
         point_display: row.point_amount ? `${formatNumber(row.point_amount)}P` : '-',
         displayPromotionType: index === 0 || promotionsForMonth[index - 1]?.promotion_type !== row.promotion_type,
         key: `${row.report_month}-${row.promotion_type}-${row.point_amount}-${row.total_points_issued}`,
@@ -621,7 +623,15 @@ function App() {
   )
 
   const collapsedPromotionRows = useMemo(() => {
-    const groupedRows = new Map<string, { promotion_type: string; participant_count: number; total_points_issued: number; min_point: number | null; max_point: number | null; key: string }>()
+    const groupedRows = new Map<string, {
+      promotion_type: string
+      participant_count: number
+      total_points_issued: number
+      points_used: number
+      min_point: number | null
+      max_point: number | null
+      key: string
+    }>()
 
     promotionsForMonth.forEach((row) => {
       const existing = groupedRows.get(row.promotion_type)
@@ -629,6 +639,7 @@ function App() {
       if (existing) {
         existing.participant_count += row.participant_count ?? 0
         existing.total_points_issued += row.total_points_issued ?? 0
+        existing.points_used += row.points_used ?? 0
         existing.min_point = pointAmount === null ? existing.min_point : existing.min_point === null ? pointAmount : Math.min(existing.min_point, pointAmount)
         existing.max_point = pointAmount === null ? existing.max_point : existing.max_point === null ? pointAmount : Math.max(existing.max_point, pointAmount)
       } else {
@@ -636,6 +647,7 @@ function App() {
           promotion_type: row.promotion_type,
           participant_count: row.participant_count ?? 0,
           total_points_issued: row.total_points_issued ?? 0,
+          points_used: row.points_used ?? 0,
           min_point: pointAmount,
           max_point: pointAmount,
           key: `${row.report_month}-${row.promotion_type}`,
@@ -645,6 +657,7 @@ function App() {
 
     return Array.from(groupedRows.values()).map((row) => ({
       ...row,
+      point_usage_rate: row.total_points_issued > 0 ? row.points_used / row.total_points_issued : null,
       point_display:
         row.min_point === null || row.max_point === null
           ? '-'
@@ -668,10 +681,17 @@ function App() {
   )
 
   const promotionTotals = useMemo(
-    () => ({
-      participantCount: promotionsForMonth.reduce((sum, row) => sum + (row.participant_count ?? 0), 0),
-      totalPointsIssued: promotionsForMonth.reduce((sum, row) => sum + (row.total_points_issued ?? 0), 0),
-    }),
+    () => {
+      const participantCount = promotionsForMonth.reduce((sum, row) => sum + (row.participant_count ?? 0), 0)
+      const totalPointsIssued = promotionsForMonth.reduce((sum, row) => sum + (row.total_points_issued ?? 0), 0)
+      const pointsUsed = promotionsForMonth.reduce((sum, row) => sum + (row.points_used ?? 0), 0)
+      return {
+        participantCount,
+        totalPointsIssued,
+        pointsUsed,
+        pointUsageRate: totalPointsIssued > 0 ? pointsUsed / totalPointsIssued : null,
+      }
+    },
     [promotionsForMonth],
   )
 
@@ -963,14 +983,23 @@ function App() {
           ]),
         ],
         promotionRows: [
-          ['프로모션', '지급 인원', '지급 포인트', '총 지급'],
+          ['프로모션', '지급 인원', '지급 포인트', '총 지급', '사용포인트', '사용률'],
           ...collapsedPromotionRows.map((row) => [
             row.promotion_type,
             formatNumber(row.participant_count),
             row.point_display,
             row.total_points_issued ? `${formatNumber(row.total_points_issued)}P` : '-',
+            row.points_used ? `${formatNumber(row.points_used)}P` : '-',
+            formatRatio(row.point_usage_rate),
           ]),
-          ['Total', formatNumber(promotionTotals.participantCount), '-', `${formatNumber(promotionTotals.totalPointsIssued)}P`],
+          [
+            'Total',
+            formatNumber(promotionTotals.participantCount),
+            '-',
+            `${formatNumber(promotionTotals.totalPointsIssued)}P`,
+            `${formatNumber(promotionTotals.pointsUsed)}P`,
+            formatRatio(promotionTotals.pointUsageRate),
+          ],
         ],
         adMetricCards: [
           { title: '광고비(마크업, vat-)', value: formatCurrency(campaignTotals.adSpend), accent: 'F59E0B' },
@@ -1257,6 +1286,8 @@ function App() {
                   <th>지급 인원</th>
                   <th>지급 포인트</th>
                   <th>총 지급</th>
+                  <th>사용포인트</th>
+                  <th>사용률</th>
                 </tr>
               </thead>
               <tbody>
@@ -1266,6 +1297,8 @@ function App() {
                     <td>{formatNumber(row.participant_count)}</td>
                     <td>{row.point_display}</td>
                     <td>{row.total_points_issued ? `${formatNumber(row.total_points_issued)}P` : '-'}</td>
+                    <td>{row.points_used ? `${formatNumber(row.points_used)}P` : '-'}</td>
+                    <td>{formatRatio(row.point_usage_rate)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1275,6 +1308,8 @@ function App() {
                   <td>{formatNumber(promotionTotals.participantCount)}</td>
                   <td>-</td>
                   <td>{`${formatNumber(promotionTotals.totalPointsIssued)}P`}</td>
+                  <td>{`${formatNumber(promotionTotals.pointsUsed)}P`}</td>
+                  <td>{formatRatio(promotionTotals.pointUsageRate)}</td>
                 </tr>
               </tfoot>
             </table>
