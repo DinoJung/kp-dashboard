@@ -294,10 +294,10 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   const summaryW = px(982)
   const promotionX = summaryX + summaryW + px(24)
   const promotionW = px(722)
-  const topPanelH = px(302)
-  const analysisGap = px(12)
+  const topPanelH = cm(7.46)
+  const analysisGap = cm(0.25)
   const analysisY = panelsY + topPanelH + analysisGap
-  const analysisH = px(180)
+  const analysisH = cm(3.63)
   addPanel(result, summaryX, panelsY, summaryW, topPanelH)
   result.addText('최근 6개월 핵심 지표 추이', {
     x: summaryX + px(26), y: panelsY + px(34), w: summaryW - px(28), h: px(24), fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
