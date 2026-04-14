@@ -729,7 +729,7 @@ tfoot td {
 
 .report-dashboard-clone {
   display: grid;
-  gap: 28px;
+  gap: 18px;
 }
 
 .report-exposure-panel {
@@ -769,7 +769,7 @@ tfoot td {
 .report-dashboard-clone__bottom {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.95fr);
-  gap: 24px;
+  gap: 16px;
   align-items: start;
 }
 
@@ -822,11 +822,15 @@ tfoot td {
 
 .report-dom-clone__panel .panel {
   height: 100%;
-  padding: 24px;
+  padding: 18px 18px 16px;
 }
 
 .report-dom-clone__panel h2 {
   font-size: 28px;
+}
+
+.report-dom-clone__panel .panel__header {
+  margin-bottom: 8px;
 }
 
 .report-dom-clone__panel .table-wrap {
@@ -843,7 +847,43 @@ tfoot td {
 }
 
 .report-dom-clone__panel--promotion table {
-  font-size: 11px;
+  font-size: 8px;
+}
+
+.report-dom-clone__panel--promotion thead th:nth-child(1),
+.report-dom-clone__panel--promotion tbody td:nth-child(1),
+.report-dom-clone__panel--promotion tfoot td:nth-child(1) {
+  width: 2.35cm;
+}
+
+.report-dom-clone__panel--promotion thead th:nth-child(2),
+.report-dom-clone__panel--promotion tbody td:nth-child(2),
+.report-dom-clone__panel--promotion tfoot td:nth-child(2) {
+  width: 1.65cm;
+}
+
+.report-dom-clone__panel--promotion thead th:nth-child(3),
+.report-dom-clone__panel--promotion tbody td:nth-child(3),
+.report-dom-clone__panel--promotion tfoot td:nth-child(3) {
+  width: 2.12cm;
+}
+
+.report-dom-clone__panel--promotion thead th:nth-child(4),
+.report-dom-clone__panel--promotion tbody td:nth-child(4),
+.report-dom-clone__panel--promotion tfoot td:nth-child(4) {
+  width: 2.12cm;
+}
+
+.report-dom-clone__panel--promotion thead th:nth-child(5),
+.report-dom-clone__panel--promotion tbody td:nth-child(5),
+.report-dom-clone__panel--promotion tfoot td:nth-child(5) {
+  width: 2.12cm;
+}
+
+.report-dom-clone__panel--promotion thead th:nth-child(6),
+.report-dom-clone__panel--promotion tbody td:nth-child(6),
+.report-dom-clone__panel--promotion tfoot td:nth-child(6) {
+  width: 1.65cm;
 }
 
 .report-dom-clone__panel thead th,
@@ -856,6 +896,18 @@ tfoot td {
   line-height: 1.35;
   text-align: center;
   vertical-align: middle;
+}
+
+.report-dom-clone__panel--promotion thead th,
+.report-dom-clone__panel--promotion tbody td,
+.report-dom-clone__panel--promotion tfoot td {
+  padding: 7px 6px;
+  font-size: 8px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .report-dom-clone__panel tfoot td {

@@ -983,7 +983,7 @@ function App() {
           ]),
         ],
         promotionRows: [
-          ['프로모션', '지급 인원', '지급 포인트', '총 지급', '사용포인트', '사용률'],
+          ['프로모션', '지급 인원', '지급 포인트', '총 지급 포인트', '사용포인트', '사용률'],
           ...collapsedPromotionRows.map((row) => [
             row.promotion_type,
             formatNumber(row.participant_count),
@@ -1285,7 +1285,7 @@ function App() {
                   <th>프로모션</th>
                   <th>지급 인원</th>
                   <th>지급 포인트</th>
-                  <th>총 지급</th>
+                  <th>총 지급 포인트</th>
                   <th>사용포인트</th>
                   <th>사용률</th>
                 </tr>

@@ -290,39 +290,39 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     addMetricCard(result, card, px(96) + index * (metricW + metricGap), px(228), metricW, px(138))
   })
   const summaryX = px(96)
-  const panelsY = px(392)
+  const panelsY = px(378)
   const summaryW = px(982)
   const promotionX = summaryX + summaryW + px(24)
   const promotionW = px(722)
-  const topPanelH = cm(7.5)
-  const analysisGap = px(20)
+  const topPanelH = px(302)
+  const analysisGap = px(12)
   const analysisY = panelsY + topPanelH + analysisGap
-  const analysisH = px(172)
+  const analysisH = px(180)
   addPanel(result, summaryX, panelsY, summaryW, topPanelH)
   result.addText('최근 6개월 핵심 지표 추이', {
-    x: summaryX + px(26), y: panelsY + px(38), w: summaryW - px(28), h: px(24), fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
+    x: summaryX + px(26), y: panelsY + px(34), w: summaryW - px(28), h: px(24), fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
   })
-  const summaryTableW = summaryW - px(36)
+  const summaryTableW = summaryW - px(28)
   const summarySpecifiedColW = [cm(1.85), cm(1.85), cm(1.85), cm(2.5), cm(2.5), cm(1.85), cm(1.85)]
   const summaryMonthColW = Number((summaryTableW - summarySpecifiedColW.reduce((sum, value) => sum + value, 0)).toFixed(4))
   result.addTable(makeTableRows(args.sixMonthTableRows, { headerFill: HEADER_NEUTRAL_FILL, secondRowFill: HEADER_GOLD_FILL }), {
-    x: summaryX + px(20), y: panelsY + px(72), w: summaryTableW, h: topPanelH - px(92),
+    x: summaryX + px(14), y: panelsY + px(66), w: summaryTableW, h: topPanelH - px(80),
     colW: [summaryMonthColW, ...summarySpecifiedColW],
     fontFace: FONT_FACE, fontSize: 8, color: BODY_TEXT, border: { color: TABLE_BORDER, pt: 1 },
     fill: { color: 'FFFFFF' }, margin: 0.03, rowH: px(48), autoFit: false, align: 'center', valign: 'middle',
   } as any)
   addPanel(result, promotionX, panelsY, promotionW, topPanelH)
   result.addText('프로모션', {
-    x: promotionX + px(26), y: panelsY + px(20), w: promotionW - px(28), h: px(16), fontFace: FONT_FACE, fontSize: 7, bold: true, color: ACCENT_AMBER,
+    x: promotionX + px(18), y: panelsY + px(16), w: promotionW - px(24), h: px(16), fontFace: FONT_FACE, fontSize: 7, bold: true, color: ACCENT_AMBER,
   })
   result.addText('포인트현황', {
-    x: promotionX + px(26), y: panelsY + px(38), w: promotionW - px(28), h: px(24), fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
+    x: promotionX + px(18), y: panelsY + px(34), w: promotionW - px(24), h: px(24), fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
   })
   result.addTable(makeTableRows(args.promotionRows, { headerFill: HEADER_NEUTRAL_FILL, totalRowFill: TOTAL_ROW_FILL }), {
-    x: promotionX + px(20), y: panelsY + px(72), w: promotionW - px(36), h: topPanelH - px(92),
-    colW: [cm(2.15), cm(1.2), cm(1.45), cm(1.35), cm(1.35), cm(0.95)],
-    fontFace: FONT_FACE, fontSize: 7, color: BODY_TEXT, border: { color: TABLE_BORDER, pt: 1 },
-    fill: { color: 'FFFFFF' }, margin: 0.02, rowH: px(44), autoFit: false, align: 'center', valign: 'middle',
+    x: promotionX + px(10), y: panelsY + px(64), w: promotionW - px(20), h: topPanelH - px(74),
+    colW: [cm(2.35), cm(1.65), cm(2.12), cm(2.12), cm(2.12), cm(1.65)],
+    fontFace: FONT_FACE, fontSize: 8, color: BODY_TEXT, border: { color: TABLE_BORDER, pt: 1 },
+    fill: { color: 'FFFFFF' }, margin: 0.015, rowH: px(39), autoFit: false, align: 'center', valign: 'middle',
   } as any)
   addPanel(result, px(96), analysisY, px(1728), analysisH)
   result.addText('결과분석', {
