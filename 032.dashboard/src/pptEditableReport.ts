@@ -48,9 +48,10 @@ const BODY_TEXT = '111827'
 const MUTED_TEXT = '6B7280'
 const ACCENT_AMBER = 'F59E0B'
 const LIGHT_AMBER = 'FEF3C7'
-const HEADER_NEUTRAL_FILL = 'F3F4F6'
+const HEADER_NEUTRAL_FILL = 'D9D9D9'
 const HEADER_GOLD_FILL = 'FFF2CC'
 const TOTAL_ROW_FILL = 'D6DCE5'
+const INSIGHT_PANEL_FILL = '4B5563'
 const FONT_FACE = 'Pretendard Variable'
 const REPORT_LOGO_WIDTH_CM = 3.2
 const REPORT_LOGO_HEIGHT_CM = (3.2 * 50.4) / 196
@@ -408,8 +409,33 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     fill: { color: 'FFFFFF' }, margin: 0.015, rowH: cm(0.85), autoFit: false, align: 'center', valign: 'middle',
   } as any)
   addPanel(result, px(96), analysisY, px(1728), analysisH)
-  result.addText('결과분석', {
-    x: px(122), y: analysisY + px(22), w: px(320), h: px(24), fontFace: FONT_FACE, fontSize: 12, bold: true, color: BODY_TEXT,
+  const insightTitleY = analysisY + px(18)
+  const insightBoxY = analysisY + px(48)
+  const insightBoxH = px(84)
+  const insightGap = px(16)
+  const arrowW = px(44)
+  const insightInnerW = px(1728) - px(36) * 2
+  const insightCardW = (insightInnerW - arrowW - insightGap * 2) / 2
+  const leftBoxX = px(132)
+  const arrowX = leftBoxX + insightCardW + insightGap
+  const rightBoxX = arrowX + arrowW + insightGap
+
+  result.addText('결과 분석', {
+    x: leftBoxX, y: insightTitleY, w: insightCardW, h: px(22), fontFace: FONT_FACE, fontSize: 11, bold: true, color: BODY_TEXT,
+  })
+  result.addText('개선안', {
+    x: rightBoxX, y: insightTitleY, w: insightCardW, h: px(22), fontFace: FONT_FACE, fontSize: 11, bold: true, color: BODY_TEXT,
+  })
+  addPanel(result, leftBoxX, insightBoxY, insightCardW, insightBoxH, INSIGHT_PANEL_FILL, INSIGHT_PANEL_FILL)
+  addPanel(result, rightBoxX, insightBoxY, insightCardW, insightBoxH, INSIGHT_PANEL_FILL, INSIGHT_PANEL_FILL)
+  result.addText('분석을 입력해주세요.', {
+    x: leftBoxX + px(20), y: insightBoxY + px(28), w: insightCardW - px(40), h: px(24), fontFace: FONT_FACE, fontSize: 11, color: 'FFFFFF',
+  })
+  result.addText('개선안을 입력해주세요.', {
+    x: rightBoxX + px(20), y: insightBoxY + px(28), w: insightCardW - px(40), h: px(24), fontFace: FONT_FACE, fontSize: 11, color: 'FFFFFF',
+  })
+  result.addText('→', {
+    x: arrowX, y: insightBoxY + px(24), w: arrowW, h: px(32), fontFace: FONT_FACE, fontSize: 20, bold: true, align: 'center', color: BODY_TEXT,
   })
 
   const exposure = pptx.addSlide()

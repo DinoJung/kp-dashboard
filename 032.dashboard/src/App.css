@@ -773,6 +773,43 @@ tfoot td {
   align-items: start;
 }
 
+.report-dashboard-clone__insight-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.report-dashboard-clone__insight-card {
+  min-width: 0;
+}
+
+.report-dashboard-clone__insight-title {
+  margin-bottom: 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.report-dashboard-clone__insight-box {
+  min-height: 78px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: #4b5563;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.report-dashboard-clone__insight-arrow {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
 .report-dashboard-clone__bottom > * {
   min-width: 0;
 }
@@ -915,13 +952,16 @@ tfoot td {
   font-weight: 700;
 }
 
-.report-dom-clone__panel--summary .report-table-preview--summary thead th:first-child,
+.report-dom-clone__panel--summary .report-table-preview--summary thead th {
+  background: #d9d9d9;
+}
+
 .report-dom-clone__panel--summary .report-table-preview--summary tbody td:first-child {
   background: #f3f4f6;
 }
 
-.report-dom-clone__panel--summary .report-table-preview--summary thead th:not(:first-child) {
-  background: #fff2cc;
+.report-dom-clone__panel--promotion thead th {
+  background: #d9d9d9;
 }
 
 .report-dom-clone__panel .panel__eyebrow {
@@ -1067,6 +1107,10 @@ tfoot td {
 
 .report-table--ad {
   font-size: 11px;
+}
+
+.report-table--ad thead th {
+  background: #d9d9d9;
 }
 
 .report-table-wrap--ad {

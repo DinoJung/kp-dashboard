@@ -891,16 +891,41 @@ function App() {
     const summaryClone = summary.cloneNode(true) as HTMLElement
     const promotionClone = promotion.cloneNode(true) as HTMLElement
     const bottomRow = document.createElement('div')
+    const insightRow = document.createElement('div')
+    const analysisCard = document.createElement('section')
+    const improvementCard = document.createElement('section')
+    const arrow = document.createElement('div')
+    const analysisTitle = document.createElement('div')
+    const improvementTitle = document.createElement('div')
+    const analysisBox = document.createElement('div')
+    const improvementBox = document.createElement('div')
 
     metricsClone.classList.add('report-dom-clone__metrics')
     summaryClone.classList.add('report-dom-clone__panel', 'report-dom-clone__panel--summary')
     promotionClone.classList.add('report-dom-clone__panel', 'report-dom-clone__panel--promotion')
     bottomRow.className = 'report-dashboard-clone__bottom'
+    insightRow.className = 'report-dashboard-clone__insight-flow'
+    analysisCard.className = 'report-dashboard-clone__insight-card'
+    improvementCard.className = 'report-dashboard-clone__insight-card'
+    arrow.className = 'report-dashboard-clone__insight-arrow'
+    arrow.setAttribute('aria-hidden', 'true')
+    arrow.textContent = '→'
+    analysisTitle.className = 'report-dashboard-clone__insight-title'
+    analysisTitle.textContent = '결과 분석'
+    improvementTitle.className = 'report-dashboard-clone__insight-title'
+    improvementTitle.textContent = '개선안'
+    analysisBox.className = 'report-dashboard-clone__insight-box'
+    analysisBox.textContent = '분석을 입력해주세요.'
+    improvementBox.className = 'report-dashboard-clone__insight-box'
+    improvementBox.textContent = '개선안을 입력해주세요.'
 
     promotionClone.querySelectorAll('.icon-toggle-button').forEach((node) => node.remove())
 
+    analysisCard.append(analysisTitle, analysisBox)
+    improvementCard.append(improvementTitle, improvementBox)
+    insightRow.append(analysisCard, arrow, improvementCard)
     bottomRow.append(summaryClone, promotionClone)
-    mount.append(metricsClone, bottomRow)
+    mount.append(metricsClone, bottomRow, insightRow)
   }
 
   async function handleGenerateReport(mode: ReportExportMode) {
