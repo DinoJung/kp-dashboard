@@ -119,6 +119,11 @@
   line-height: 1.6;
 }
 
+.brand-placeholder--error {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
 .auth-screen {
   min-height: 100vh;
   display: grid;
@@ -180,6 +185,33 @@
   justify-content: space-between;
   gap: 24px;
   align-items: flex-start;
+}
+
+.topbar--brand {
+  padding: 0 2px;
+}
+
+.icebiscuit-dashboard__title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.15;
+  color: #111827;
+}
+
+.icebiscuit-dashboard__description {
+  margin: 8px 0 0;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.icebiscuit-dashboard__meta-panel {
+  min-height: 0;
+}
+
+.icebiscuit-dashboard__empty-cell {
+  text-align: center;
+  color: #6b7280;
+  padding: 28px 12px;
 }
 
 .eyebrow,
@@ -331,6 +363,10 @@
 
 .metrics-grid--seven {
   grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.metrics-grid--six {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .metric-card {
