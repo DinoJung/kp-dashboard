@@ -4,6 +4,121 @@
   gap: 24px;
 }
 
+.dashboard-shell--brand-tabs {
+  gap: 20px;
+}
+
+.brand-tabs {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 20px 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(249, 250, 251, 0.96) 100%);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.brand-tabs__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.brand-tabs__copy h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+  color: #111827;
+}
+
+.brand-tabs__description {
+  margin: 0;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.brand-tabs__list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.brand-tab {
+  min-width: 180px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.brand-tab strong {
+  font-size: 15px;
+  color: #111827;
+}
+
+.brand-tab span {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.brand-tab.is-active {
+  border-color: #111827;
+  background: #111827;
+}
+
+.brand-tab.is-active strong,
+.brand-tab.is-active span {
+  color: #fff;
+}
+
+.brand-panel {
+  min-width: 0;
+}
+
+.brand-placeholder {
+  padding: 28px;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+  display: grid;
+  gap: 14px;
+}
+
+.brand-placeholder h2,
+.brand-placeholder p,
+.brand-placeholder ul {
+  margin: 0;
+}
+
+.brand-placeholder__badge {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.brand-placeholder__list {
+  padding-left: 18px;
+  color: #374151;
+  line-height: 1.6;
+}
+
 .auth-screen {
   min-height: 100vh;
   display: grid;
