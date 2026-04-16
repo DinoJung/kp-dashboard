@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import calendar
 import json
+import re
+import shutil
 import subprocess
 from collections import defaultdict
 from datetime import date, datetime
@@ -17,15 +19,38 @@ ENV_PATH = ROOT / '.env'
 SCHEMA = 'thekary_point'
 SPREADSHEET_ID = '1bALRM_uxx4UbVdjIDuk8JE5-hGp1rjyy0Xuf3gHS8gQ'
 SPREADSHEET_URL = f'https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit'
+DEFAULT_GWS_CANDIDATES = [
+    '/home/j1nu/.nvm/versions/node/v24.14.1/lib/node_modules/@googleworkspace/cli/bin/gws',
+]
 
 SHEET_RANGES = {
     'guide': 'guide!A:D',
-    'raw_member': 'raw_member!A:J',
+    'raw_member': 'raw_member!A:ZZ',
     'raw_event': 'raw_event!A:J',
     'raw_ad': 'raw_ad!A:T',
     'raw_optin': 'raw_optin!A:D',
     'daily_activity': 'daily_activity!A:C',
     'monthly_activity': 'monthly_activity!A:C',
+}
+
+HEADER_ALIASES = {
+    'report_date': ['report_date', 'date'],
+    'report_month': ['report_month', 'month', 'year_month'],
+    'weekday_text': ['weekday_text', 'weekday', 'day_of_week'],
+    'member_count': ['member_count', 'members', 'new_members'],
+    'app_downloads': ['app_downloads', 'app_download', 'downloads'],
+    'withdrawals': ['withdrawals', 'withdrawal'],
+    'net_growth': ['net_growth', 'member_net_growth'],
+    'cumulative_conversion': ['cumulative_conversion', 'cumulative_conversion_eom'],
+    'active_members': ['active_members', 'active_member', 'active_members_eom'],
+    'is_month_end': ['is_month_end', 'month_end', 'eom'],
+    'issue_note': ['issue_note', 'note', 'memo'],
+    'sms_opt_in_members': ['sms_opt_in_members', 'sms_optin_members', 'sms_optin', 'sms_opt_in'],
+    'push_opt_in_members': ['push_opt_in_members', 'push_optin_members', 'push_optin', 'push_opt_in'],
+    'optin': ['optin', 'opt_in', 'opt_in_members', 'optin_members'],
+    'dau': ['dau', 'daily_active_users'],
+    'mau': ['mau', 'monthly_active_users'],
+    'source_note': ['source_note', 'note', 'memo'],
 }
 
 
@@ -36,9 +61,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_gws_bin() -> str:
+    env_value = dotenv_values(ENV_PATH).get('GWS_BIN') if ENV_PATH.exists() else None
+    if env_value:
+        env_bin = Path(str(env_value)).expanduser()
+        if env_bin.exists() and env_bin.is_file():
+            return str(env_bin)
+
+    path_bin = shutil.which('gws')
+    if path_bin:
+        return path_bin
+
+    for candidate in DEFAULT_GWS_CANDIDATES:
+        candidate_path = Path(candidate)
+        if candidate_path.exists() and candidate_path.is_file():
+            return str(candidate_path)
+
+    raise FileNotFoundError('gws binary not found. Add GWS_BIN to .env or install gws on PATH.')
+
+
 def gws_read(spreadsheet_id: str, a1_range: str) -> list[list[str]]:
     cmd = [
-        'gws', 'sheets', '+read',
+        resolve_gws_bin(), 'sheets', '+read',
         '--spreadsheet', spreadsheet_id,
         '--range', a1_range,
         '--format', 'json',
@@ -65,6 +109,52 @@ def rows_from_sheet(spreadsheet_id: str, a1_range: str) -> list[dict[str, str]]:
     return rows
 
 
+def optional_rows_from_sheet(spreadsheet_id: str, a1_range: str) -> list[dict[str, str]]:
+    try:
+        return rows_from_sheet(spreadsheet_id, a1_range)
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or '').lower()
+        if 'unable to parse range' in stderr or 'range (' in stderr or 'sheet' in stderr:
+            return []
+        raise
+
+
+def normalize_header_key(value: str | None) -> str:
+    if value is None:
+        return ''
+    return re.sub(r'[^a-z0-9]+', '', str(value).strip().lower())
+
+
+def row_value(row: dict[str, str], *logical_names: str) -> str | None:
+    normalized_row = {
+        normalize_header_key(key): str(value).strip()
+        for key, value in row.items()
+        if key
+    }
+    for logical_name in logical_names:
+        aliases = HEADER_ALIASES.get(logical_name, [logical_name])
+        for alias in aliases:
+            value = normalized_row.get(normalize_header_key(alias))
+            if value not in {None, ''}:
+                return value
+    return None
+
+
+def row_has_value(row: dict[str, str], *logical_names: str) -> bool:
+    return row_value(row, *logical_names) not in {None, ''}
+
+
+def month_reference(row: dict[str, str], date_field: str = 'report_date', month_field: str = 'report_month') -> date | None:
+    report_date = parse_date(row_value(row, date_field))
+    if report_date:
+        return report_date
+    report_month = parse_date(row_value(row, month_field))
+    if report_month:
+        return month_start(report_month)
+    return None
+
+
+
 def parse_date(value: str | None) -> date | None:
     if not value:
         return None
@@ -75,6 +165,17 @@ def parse_date(value: str | None) -> date | None:
             return parsed.replace(day=1) if fmt in {'%Y-%m', '%Y.%m', '%Y/%m'} else parsed
         except ValueError:
             continue
+
+    korean_month = re.match(r'^(\d{2,4})\s*년\s*(\d{1,2})\s*월(?:\s*(\d{1,2})\s*일)?$', value)
+    if korean_month:
+        year = int(korean_month.group(1))
+        if year < 100:
+            year += 2000
+        month = int(korean_month.group(2))
+        day = int(korean_month.group(3) or 1)
+        if 1 <= month <= 12:
+            last_day = calendar.monthrange(year, month)[1]
+            return date(year, month, min(max(day, 1), last_day))
 
     normalized = value.replace('.', '-').replace('/', '-')
     parts = normalized.split('-')
@@ -103,10 +204,14 @@ def to_float(value: str | None) -> float | None:
     if value is None:
         return None
     cleaned = str(value).strip().replace(',', '')
-    if cleaned == '':
+    if cleaned in {'', '-'}:
         return None
+    is_percent = cleaned.endswith('%')
+    if is_percent:
+        cleaned = cleaned[:-1].strip()
     try:
-        return float(cleaned)
+        numeric = float(cleaned)
+        return numeric / 100 if is_percent else numeric
     except ValueError:
         return None
 
@@ -131,41 +236,85 @@ def build_payloads(spreadsheet_id: str) -> dict[str, Any]:
     raw_member_rows = [row for row in rows_from_sheet(spreadsheet_id, SHEET_RANGES['raw_member']) if not is_demo_row(row)]
     raw_event_rows = [row for row in rows_from_sheet(spreadsheet_id, SHEET_RANGES['raw_event']) if not is_demo_row(row)]
     raw_ad_rows = [row for row in rows_from_sheet(spreadsheet_id, SHEET_RANGES['raw_ad']) if not is_demo_row(row)]
-    raw_optin_rows = [row for row in rows_from_sheet(spreadsheet_id, SHEET_RANGES['raw_optin']) if not is_demo_row(row)]
-    daily_activity_rows = [row for row in rows_from_sheet(spreadsheet_id, SHEET_RANGES['daily_activity']) if not is_demo_row(row)]
-    monthly_activity_rows = [row for row in rows_from_sheet(spreadsheet_id, SHEET_RANGES['monthly_activity']) if not is_demo_row(row)]
+    raw_optin_rows = [row for row in optional_rows_from_sheet(spreadsheet_id, SHEET_RANGES['raw_optin']) if not is_demo_row(row)]
+    daily_activity_rows = [row for row in optional_rows_from_sheet(spreadsheet_id, SHEET_RANGES['daily_activity']) if not is_demo_row(row)]
+    monthly_activity_rows = [row for row in optional_rows_from_sheet(spreadsheet_id, SHEET_RANGES['monthly_activity']) if not is_demo_row(row)]
 
     member_raw: list[dict[str, Any]] = []
     by_month_member: dict[date, list[dict[str, Any]]] = defaultdict(list)
+    merged_optin_rows: list[dict[str, Any]] = []
+    merged_daily_activity: list[dict[str, Any]] = []
+    merged_monthly_activity: dict[date, dict[str, Any]] = {}
 
     for row in raw_member_rows:
-        report_date = parse_date(row.get('report_date'))
-        if not report_date:
-            continue
-        item = {
-            'report_date': report_date,
-            'weekday_text': row.get('weekday_text') or None,
-            'member_count': to_int(row.get('member_count')),
-            'app_downloads': to_int(row.get('app_downloads')),
-            'withdrawals': to_int(row.get('withdrawals')),
-            'net_growth': to_int(row.get('net_growth')),
-            'cumulative_conversion': to_int(row.get('cumulative_conversion')),
-            'active_members': to_int(row.get('active_members')),
-            'is_month_end': to_bool(row.get('is_month_end')),
-            'issue_note': row.get('issue_note') or None,
-        }
-        member_raw.append(item)
-        by_month_member[month_start(report_date)].append(item)
+        report_date = parse_date(row_value(row, 'report_date'))
+        report_month_reference = month_reference(row)
+
+        if report_date:
+            item = {
+                'report_date': report_date,
+                'weekday_text': row_value(row, 'weekday_text'),
+                'member_count': to_int(row_value(row, 'member_count')),
+                'app_downloads': to_int(row_value(row, 'app_downloads')),
+                'withdrawals': to_int(row_value(row, 'withdrawals')),
+                'net_growth': to_int(row_value(row, 'net_growth')),
+                'cumulative_conversion': to_int(row_value(row, 'cumulative_conversion')),
+                'active_members': to_int(row_value(row, 'active_members')),
+                'is_month_end': to_bool(row_value(row, 'is_month_end')),
+                'issue_note': row_value(row, 'issue_note'),
+            }
+            member_raw.append(item)
+            by_month_member[month_start(report_date)].append(item)
+
+        if report_month_reference:
+            report_month = month_start(report_month_reference)
+            sms_value = to_int(row_value(row, 'sms_opt_in_members'))
+            push_value = to_int(row_value(row, 'push_opt_in_members'))
+            generic_optin = to_int(row_value(row, 'optin'))
+            if sms_value is not None or push_value is not None or generic_optin is not None:
+                merged_optin_rows.append({
+                    'report_month': report_month,
+                    'sms_opt_in_members': sms_value,
+                    'push_opt_in_members': push_value if push_value is not None else generic_optin,
+                })
+
+            dau_value = to_int(row_value(row, 'dau'))
+            if report_date and dau_value is not None:
+                merged_daily_activity.append({
+                    'report_date': report_date,
+                    'dau': dau_value,
+                    'source_note': row_value(row, 'source_note', 'issue_note') or 'raw_member_merged',
+                })
+
+            mau_value = to_int(row_value(row, 'mau'))
+            if mau_value is not None:
+                existing = merged_monthly_activity.get(report_month)
+                if existing is None or report_month_reference >= existing['_source_date']:
+                    merged_monthly_activity[report_month] = {
+                        'report_month': report_month,
+                        'mau': mau_value,
+                        'source_note': row_value(row, 'source_note', 'issue_note') or 'raw_member_merged',
+                        '_source_date': report_month_reference,
+                    }
 
     optin_by_month: dict[date, dict[str, int | None]] = {}
-    for row in raw_optin_rows:
-        report_date = parse_date(row.get('report_month'))
-        if not report_date:
-            continue
-        report_month = month_start(report_date)
+    optin_source_rows = merged_optin_rows if merged_optin_rows else []
+    if not optin_source_rows:
+        for row in raw_optin_rows:
+            report_reference = month_reference(row)
+            if not report_reference:
+                continue
+            optin_source_rows.append({
+                'report_month': month_start(report_reference),
+                'sms_opt_in_members': to_int(row_value(row, 'sms_opt_in_members')),
+                'push_opt_in_members': to_int(row_value(row, 'push_opt_in_members')),
+            })
+
+    for row in optin_source_rows:
+        report_month = row['report_month']
         existing = optin_by_month.get(report_month)
-        sms_value = to_int(row.get('sms_opt_in_members'))
-        push_value = to_int(row.get('push_opt_in_members'))
+        sms_value = row.get('sms_opt_in_members')
+        push_value = row.get('push_opt_in_members')
         if existing:
             existing['sms_opt_in_members'] = (existing['sms_opt_in_members'] or 0) + (sms_value or 0)
             existing['push_opt_in_members'] = (existing['push_opt_in_members'] or 0) + (push_value or 0)
@@ -271,26 +420,39 @@ def build_payloads(spreadsheet_id: str) -> dict[str, Any]:
             }
 
     daily_activity = []
-    for row in daily_activity_rows:
-        report_date = parse_date(row.get('report_date'))
-        if not report_date:
-            continue
-        daily_activity.append({
-            'report_date': report_date,
-            'dau': to_int(row.get('dau')),
-            'source_note': row.get('source_note') or 'google_sheets_sync',
-        })
+    if merged_daily_activity:
+        daily_activity = sorted(merged_daily_activity, key=lambda x: x['report_date'])
+    else:
+        for row in daily_activity_rows:
+            report_date = parse_date(row_value(row, 'report_date'))
+            if not report_date:
+                continue
+            daily_activity.append({
+                'report_date': report_date,
+                'dau': to_int(row_value(row, 'dau')),
+                'source_note': row_value(row, 'source_note') or 'google_sheets_sync',
+            })
 
     monthly_activity = []
-    for row in monthly_activity_rows:
-        report_month = parse_date(row.get('report_month'))
-        if not report_month:
-            continue
-        monthly_activity.append({
-            'report_month': month_start(report_month),
-            'mau': to_int(row.get('mau')),
-            'source_note': row.get('source_note') or 'google_sheets_sync',
-        })
+    if merged_monthly_activity:
+        monthly_activity = [
+            {
+                'report_month': item['report_month'],
+                'mau': item['mau'],
+                'source_note': item['source_note'],
+            }
+            for _, item in sorted(merged_monthly_activity.items())
+        ]
+    else:
+        for row in monthly_activity_rows:
+            report_month = month_reference(row)
+            if not report_month:
+                continue
+            monthly_activity.append({
+                'report_month': month_start(report_month),
+                'mau': to_int(row_value(row, 'mau')),
+                'source_note': row_value(row, 'source_note') or 'google_sheets_sync',
+            })
 
     return {
         'member_raw': member_raw,

@@ -1,2 +1,3 @@
-﻿report_date,weekday_text,member_count,app_downloads,withdrawals,net_growth,cumulative_conversion,active_members,is_month_end,issue_note
-2026-03-31,화,5825,2123,0,5825,74282,0,TRUE,example
+report_date,weekday_text,member_count,app_downloads,withdrawals,net_growth,cumulative_conversion,active_members,sms_opt_in_members,push_opt_in_members,dau,mau,is_month_end,issue_note
+2026-03-30,월,281,104,1,280,74120,91300,42,42,812,,FALSE,
+2026-03-31,화,5825,2123,0,5825,74282,91456,1200,950,8412,126320,TRUE,example

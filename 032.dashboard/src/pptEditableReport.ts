@@ -53,6 +53,7 @@ const HEADER_GOLD_FILL = 'FFF2CC'
 const TOTAL_ROW_FILL = 'D6DCE5'
 const INSIGHT_PANEL_FILL = '4B5563'
 const FONT_FACE = 'Pretendard Variable'
+const MASTER_NAME = 'thekary-default-master'
 const REPORT_LOGO_WIDTH_CM = 3.2
 const REPORT_LOGO_HEIGHT_CM = (3.2 * 50.4) / 196
 
@@ -69,6 +70,28 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   pptx.subject = `Thekary Point ${args.reportMonthKey} editable report`
   pptx.title = `Thekary Point Report ${args.reportMonthKey}`
   pptx.theme = { headFontFace: FONT_FACE, bodyFontFace: FONT_FACE, lang: 'ko-KR' } as any
+  pptx.defineSlideMaster({
+    title: MASTER_NAME,
+    background: { color: 'FFFFFF' },
+    objects: [
+      {
+        text: {
+          text: '',
+          options: {
+            x: 0,
+            y: 0,
+            w: 0.01,
+            h: 0.01,
+            margin: 0,
+            fontFace: FONT_FACE,
+            fontSize: 10,
+            color: BODY_TEXT,
+            valign: 'middle',
+          },
+        },
+      },
+    ],
+  })
 
   async function toDataUrl(src: string) {
     const cached = imageCache.get(src)
@@ -266,6 +289,22 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     }
   }
 
+  function addWeeklyChipLabel(slide: PptxGenJS.Slide, text: string, x: number, y: number, w: number, h: number) {
+    slide.addText(text, {
+      x,
+      y,
+      w,
+      h,
+      margin: 0,
+      fontFace: FONT_FACE,
+      fontSize: 10,
+      align: 'center',
+      valign: 'middle',
+      color: BODY_TEXT,
+      fit: 'shrink',
+    })
+  }
+
   function addWeeklySchedulePlaceholder(slide: PptxGenJS.Slide, weekIndex: number, x: number, y: number, w: number, h: number) {
     const chipH = px(18)
     const chipW = px(96)
@@ -289,10 +328,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
             x: x + px(6), y: rowY, w: chipW, h: chipH, rectRadius: 0.08,
             line: { color: color.border, width: 1 }, fill: { color: color.fill },
           })
-          slide.addText(' ', {
-            x: x + px(6), y: rowY, w: chipW, h: chipH, margin: 0,
-            fontFace: FONT_FACE, fontSize: 10, align: 'center', valign: 'middle', color: BODY_TEXT,
-          })
+          addWeeklyChipLabel(slide, ' ', x + px(6), rowY, chipW, chipH)
           slide.addShape(pptx.ShapeType.line, {
             x: x + px(6) + chipW + arrowGap,
             y: rowY + chipH / 2,
@@ -312,10 +348,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
             x: x + w - chipW - px(6), y: rowY, w: chipW, h: chipH, rectRadius: 0.08,
             line: { color: color.border, width: 1 }, fill: { color: color.fill },
           })
-          slide.addText(' ', {
-            x: x + w - chipW - px(6), y: rowY, w: chipW, h: chipH, margin: 0,
-            fontFace: FONT_FACE, fontSize: 10, align: 'center', valign: 'middle', color: BODY_TEXT,
-          })
+          addWeeklyChipLabel(slide, ' ', x + w - chipW - px(6), rowY, chipW, chipH)
         }
       })
       return
@@ -328,16 +361,13 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
         x: noteX, y: noteY, w: noteW, h: chipH, rectRadius: 0.08,
         line: { color: 'FCD34D', width: 1 }, fill: { color: 'FEF3C7' },
       })
-      slide.addText(' ', {
-        x: noteX, y: noteY, w: noteW, h: chipH, margin: 0,
-        fontFace: FONT_FACE, fontSize: 10, align: 'center', valign: 'middle', color: BODY_TEXT,
-      })
+      addWeeklyChipLabel(slide, ' ', noteX, noteY, noteW, chipH)
     }
   }
 
   const logoData = await toDataUrl(args.logoSrc)
 
-  const cover = pptx.addSlide()
+  const cover = pptx.addSlide({ masterName: MASTER_NAME })
   cover.background = { color: 'FFFFFF' }
   const coverGroupTop = px(394)
   const coverTitleH = px(36)
@@ -365,7 +395,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     h: cm(REPORT_LOGO_HEIGHT_CM),
   })
 
-  const result = pptx.addSlide()
+  const result = pptx.addSlide({ masterName: MASTER_NAME })
   result.background = { color: 'FFFFFF' }
   addHeader(result, `${args.monthLabelKorean} RESULT`, 'summary', logoData)
   const metricGap = px(16)
@@ -438,7 +468,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     x: arrowX, y: insightBoxY + px(24), w: arrowW, h: px(32), fontFace: FONT_FACE, fontSize: 20, bold: true, align: 'center', color: BODY_TEXT,
   })
 
-  const exposure = pptx.addSlide()
+  const exposure = pptx.addSlide({ masterName: MASTER_NAME })
   exposure.background = { color: 'FFFFFF' }
   addHeader(exposure, `${args.monthLabelKorean} 브랜드 사이트 팝업`, 'exposure', logoData)
   exposure.addText(`더캐리포인트 가입 유도 팝업 | ${args.exposureFirstBusinessDay} 10:00`, {
@@ -449,7 +479,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
   })
   addPanel(exposure, px(96), px(328), px(1728), px(656), 'FFFFFF', 'D1D5DB')
 
-  const ad = pptx.addSlide()
+  const ad = pptx.addSlide({ masterName: MASTER_NAME })
   ad.background = { color: 'FFFFFF' }
   addHeader(ad, `${args.monthLabelKorean} AD`, 'ad', logoData)
   const adMetricGap = px(14)
@@ -482,7 +512,7 @@ export async function generateEditableReportPpt(args: EditableReportArgs) {
     await addMatchedHeightImages(ad, card.images, imageBoxX, imageBoxY, imageBoxW, imageBoxH, cm(0.3), cm(4.35))
   }
 
-  const plan = pptx.addSlide()
+  const plan = pptx.addSlide({ masterName: MASTER_NAME })
   plan.background = { color: 'FFFFFF' }
   const planGap = px(12)
   const planHeaderH = px(44)
