@@ -406,6 +406,7 @@
 }
 
 .month-selector select,
+.month-selector input,
 .ghost-button,
 .primary-button {
   border-radius: 12px;
@@ -437,6 +438,7 @@
 .hint-chip {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   min-height: 44px;
   padding: 0 14px;
   border-radius: 999px;
@@ -445,6 +447,116 @@
   font-size: 13px;
   font-weight: 600;
   box-sizing: border-box;
+}
+
+.icebiscuit-dashboard__actions {
+  max-width: min(100%, 860px);
+}
+
+.icebiscuit-dashboard__date-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.icebiscuit-dashboard__date-field {
+  min-width: 160px;
+}
+
+.icebiscuit-dashboard__preset-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.icebiscuit-dashboard__preset-button,
+.icebiscuit-dashboard__view-mode {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #dbe2ea;
+  background: #ffffff;
+  color: #4b5563;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.icebiscuit-dashboard__preset-button:hover,
+.icebiscuit-dashboard__view-mode:hover {
+  border-color: #93c5fd;
+  color: #0047ab;
+}
+
+.icebiscuit-dashboard__preset-button.is-active,
+.icebiscuit-dashboard__view-mode.is-active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #0047ab;
+}
+
+.icebiscuit-dashboard__view-modes {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.icebiscuit-dashboard__campaign-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icebiscuit-dashboard__row-toggle {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #dbe2ea;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #4b5563;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.icebiscuit-dashboard__row-toggle--placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  color: #cbd5e1;
+  cursor: default;
+}
+
+.icebiscuit-dashboard__child-row td {
+  background: #f8fafc;
+}
+
+.icebiscuit-dashboard__child-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 32px;
+}
+
+.icebiscuit-dashboard__child-prefix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #e5efff;
+  color: #0047ab;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .settings-menu {

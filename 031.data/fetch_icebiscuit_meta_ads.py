@@ -7,7 +7,7 @@ import urllib.request
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import psycopg
 from dotenv import dotenv_values
@@ -44,14 +44,16 @@ LINK_CLICK_TYPES = {
     'link_click',
     'inline_link_click',
 }
+InsightLevel = Literal['campaign', 'ad']
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description='Fetch Icebiscuit META campaign insights and upsert into Supabase/Postgres.')
+    parser = argparse.ArgumentParser(description='Fetch Icebiscuit META insights and upsert into Supabase/Postgres.')
     parser.add_argument('--since', help='Inclusive start date YYYY-MM-DD. Default: first day of current month.')
     parser.add_argument('--until', help='Inclusive end date YYYY-MM-DD. Default: yesterday.')
     parser.add_argument('--account-id', help='Override META_ICEBISCUIT_AD_ACCOUNT_ID from .env')
     parser.add_argument('--dry-run', action='store_true', help='Fetch and summarize only, without writing to DB.')
+    parser.add_argument('--level', choices=['campaign', 'ad'], default='campaign', help='Meta insights level to fetch. Default: campaign')
     return parser.parse_args()
 
 
@@ -82,32 +84,36 @@ def meta_account_id(raw_value: str) -> str:
     return f'act_{account}'
 
 
-def build_insights_url(account_id: str, access_token: str, api_version: str, since: date, until: date, after: str | None = None) -> str:
+def build_insights_url(account_id: str, access_token: str, api_version: str, since: date, until: date, level: InsightLevel, after: str | None = None) -> str:
+    fields = [
+        'date_start',
+        'date_stop',
+        'account_id',
+        'account_name',
+        'campaign_id',
+        'campaign_name',
+        'objective',
+        'buying_type',
+        'impressions',
+        'reach',
+        'clicks',
+        'spend',
+        'cpc',
+        'ctr',
+        'actions',
+        'action_values',
+        'conversions',
+    ]
+    if level == 'ad':
+        fields.extend(['adset_id', 'adset_name', 'ad_id', 'ad_name'])
+
     params = {
         'access_token': access_token,
-        'level': 'campaign',
+        'level': level,
         'time_increment': '1',
         'time_range': json.dumps({'since': since.isoformat(), 'until': until.isoformat()}),
         'limit': '100',
-        'fields': ','.join([
-            'date_start',
-            'date_stop',
-            'account_id',
-            'account_name',
-            'campaign_id',
-            'campaign_name',
-            'objective',
-            'buying_type',
-            'impressions',
-            'reach',
-            'clicks',
-            'spend',
-            'cpc',
-            'ctr',
-            'actions',
-            'action_values',
-            'conversions',
-        ]),
+        'fields': ','.join(fields),
     }
     if after:
         params['after'] = after
@@ -183,11 +189,19 @@ def normalize_float(value: Any) -> float | None:
         return None
 
 
-def build_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+def build_rows(
+    payload: dict[str, Any],
+    level: InsightLevel,
+    account_id: str,
+    access_token: str,
+    api_version: str,
+    since: date,
+    until: date,
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     after: str | None = None
     while True:
-        page = payload if after is None else fetch_json(payload['next_url'])
+        page = payload if after is None else fetch_json(build_insights_url(account_id, access_token, api_version, since, until, level, after))
         for item in page.get('data', []):
             actions = item.get('actions') or []
             action_values = item.get('action_values') or []
@@ -196,7 +210,7 @@ def build_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
             report_date = parse_iso_date(item.get('date_start'))
             if not report_date:
                 continue
-            rows.append({
+            row = {
                 'report_date': report_date,
                 'account_id': item.get('account_id'),
                 'account_name': item.get('account_name'),
@@ -220,18 +234,22 @@ def build_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 'raw_actions': json.dumps(actions, ensure_ascii=False),
                 'raw_action_values': json.dumps(action_values, ensure_ascii=False),
                 'raw_payload': json.dumps(item, ensure_ascii=False),
-            })
+                'adset_id': item.get('adset_id') if level == 'ad' else None,
+                'adset_name': item.get('adset_name') if level == 'ad' else None,
+                'ad_id': item.get('ad_id') if level == 'ad' else None,
+                'ad_name': item.get('ad_name') if level == 'ad' else None,
+            }
+            rows.append(row)
         paging = page.get('paging') or {}
         cursors = paging.get('cursors') or {}
         after = cursors.get('after')
         next_url = paging.get('next')
         if not after or not next_url:
             break
-        payload = {'next_url': next_url}
     return rows
 
 
-def print_summary(rows: list[dict[str, Any]], account_id: str, since: date, until: date) -> None:
+def print_summary(rows: list[dict[str, Any]], account_id: str, since: date, until: date, level: InsightLevel) -> None:
     monthly = defaultdict(lambda: {'spend': 0.0, 'impressions': 0, 'clicks': 0, 'purchase_value': 0.0})
     for row in rows:
         month_key = row['report_date'].replace(day=1).isoformat()
@@ -240,6 +258,7 @@ def print_summary(rows: list[dict[str, Any]], account_id: str, since: date, unti
         monthly[month_key]['clicks'] += row.get('clicks') or 0
         monthly[month_key]['purchase_value'] += row.get('purchase_value') or 0.0
 
+    print('LEVEL', level)
     print('ACCOUNT_ID', account_id)
     print('SINCE', since.isoformat())
     print('UNTIL', until.isoformat())
@@ -250,7 +269,120 @@ def print_summary(rows: list[dict[str, Any]], account_id: str, since: date, unti
         print('MONTH', month_key, 'SPEND', round(month['spend'], 2), 'IMPRESSIONS', month['impressions'], 'CLICKS', month['clicks'], 'PURCHASE_VALUE', round(month['purchase_value'], 2), 'ROAS', round(roas, 4))
 
 
-def persist_rows(rows: list[dict[str, Any]], cfg: dict[str, str], account_id: str, since: date, until: date) -> None:
+def persist_campaign_rows(rows: list[dict[str, Any]], cur: psycopg.Cursor[Any], import_batch_id: int, delete_account_ids: list[str], report_dates: list[date]) -> None:
+    if report_dates:
+        cur.execute(
+            f'delete from {SCHEMA}.raw_campaign_insights_daily where account_id = any(%s) and report_date = any(%s)',
+            (delete_account_ids, report_dates),
+        )
+
+    if rows:
+        cur.executemany(
+            f'''
+            insert into {SCHEMA}.raw_campaign_insights_daily (
+                import_batch_id, report_date, account_id, account_name, campaign_id, campaign_name,
+                campaign_status, objective, buying_type, impressions, reach, clicks,
+                inline_link_clicks, landing_page_views, spend, cpc, ctr, purchase_count,
+                purchase_value, conversions, conversion_value, raw_actions, raw_action_values,
+                raw_payload
+            ) values (
+                %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s,
+                %s
+            )
+            ''',
+            [
+                (
+                    import_batch_id,
+                    row['report_date'],
+                    row['account_id'],
+                    row['account_name'],
+                    row['campaign_id'],
+                    row['campaign_name'],
+                    row['campaign_status'],
+                    row['objective'],
+                    row['buying_type'],
+                    row['impressions'],
+                    row['reach'],
+                    row['clicks'],
+                    row['inline_link_clicks'],
+                    row['landing_page_views'],
+                    row['spend'],
+                    row['cpc'],
+                    row['ctr'],
+                    row['purchase_count'],
+                    row['purchase_value'],
+                    row['conversions'],
+                    row['conversion_value'],
+                    row['raw_actions'],
+                    row['raw_action_values'],
+                    row['raw_payload'],
+                )
+                for row in rows
+            ],
+        )
+
+
+def persist_ad_rows(rows: list[dict[str, Any]], cur: psycopg.Cursor[Any], import_batch_id: int, delete_account_ids: list[str], report_dates: list[date]) -> None:
+    if report_dates:
+        cur.execute(
+            f'delete from {SCHEMA}.raw_ad_insights_daily where account_id = any(%s) and report_date = any(%s)',
+            (delete_account_ids, report_dates),
+        )
+
+    if rows:
+        cur.executemany(
+            f'''
+            insert into {SCHEMA}.raw_ad_insights_daily (
+                import_batch_id, report_date, account_id, account_name, campaign_id, campaign_name,
+                adset_id, adset_name, ad_id, ad_name, objective, buying_type, impressions, reach,
+                clicks, inline_link_clicks, landing_page_views, spend, cpc, ctr, purchase_count,
+                purchase_value, conversions, conversion_value, raw_actions, raw_action_values, raw_payload
+            ) values (
+                %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s
+            )
+            ''',
+            [
+                (
+                    import_batch_id,
+                    row['report_date'],
+                    row['account_id'],
+                    row['account_name'],
+                    row['campaign_id'],
+                    row['campaign_name'],
+                    row['adset_id'],
+                    row['adset_name'],
+                    row['ad_id'],
+                    row['ad_name'],
+                    row['objective'],
+                    row['buying_type'],
+                    row['impressions'],
+                    row['reach'],
+                    row['clicks'],
+                    row['inline_link_clicks'],
+                    row['landing_page_views'],
+                    row['spend'],
+                    row['cpc'],
+                    row['ctr'],
+                    row['purchase_count'],
+                    row['purchase_value'],
+                    row['conversions'],
+                    row['conversion_value'],
+                    row['raw_actions'],
+                    row['raw_action_values'],
+                    row['raw_payload'],
+                )
+                for row in rows
+            ],
+        )
+
+
+def persist_rows(rows: list[dict[str, Any]], cfg: dict[str, str], account_id: str, since: date, until: date, level: InsightLevel) -> None:
     db_url = cfg.get('DATABASE_URL')
     if not db_url:
         raise RuntimeError('DATABASE_URL is missing in /10.work/03.KPdash/.env')
@@ -268,7 +400,7 @@ def persist_rows(rows: list[dict[str, Any]], cfg: dict[str, str], account_id: st
                 ''',
                 (
                     account_id,
-                    f'META campaign insights sync {since.isoformat()}~{until.isoformat()}',
+                    f'META {level} insights sync {since.isoformat()}~{until.isoformat()}',
                     since,
                     until,
                     'hermes',
@@ -277,59 +409,10 @@ def persist_rows(rows: list[dict[str, Any]], cfg: dict[str, str], account_id: st
             )
             import_batch_id = cur.fetchone()[0]
 
-            if report_dates:
-                cur.execute(
-                    f'delete from {SCHEMA}.raw_campaign_insights_daily where account_id = any(%s) and report_date = any(%s)',
-                    (delete_account_ids, report_dates),
-                )
-
-            if rows:
-                cur.executemany(
-                    f'''
-                    insert into {SCHEMA}.raw_campaign_insights_daily (
-                        import_batch_id, report_date, account_id, account_name, campaign_id, campaign_name,
-                        campaign_status, objective, buying_type, impressions, reach, clicks,
-                        inline_link_clicks, landing_page_views, spend, cpc, ctr, purchase_count,
-                        purchase_value, conversions, conversion_value, raw_actions, raw_action_values,
-                        raw_payload
-                    ) values (
-                        %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s,
-                        %s
-                    )
-                    ''',
-                    [
-                        (
-                            import_batch_id,
-                            row['report_date'],
-                            row['account_id'],
-                            row['account_name'],
-                            row['campaign_id'],
-                            row['campaign_name'],
-                            row['campaign_status'],
-                            row['objective'],
-                            row['buying_type'],
-                            row['impressions'],
-                            row['reach'],
-                            row['clicks'],
-                            row['inline_link_clicks'],
-                            row['landing_page_views'],
-                            row['spend'],
-                            row['cpc'],
-                            row['ctr'],
-                            row['purchase_count'],
-                            row['purchase_value'],
-                            row['conversions'],
-                            row['conversion_value'],
-                            row['raw_actions'],
-                            row['raw_action_values'],
-                            row['raw_payload'],
-                        )
-                        for row in rows
-                    ],
-                )
+            if level == 'campaign':
+                persist_campaign_rows(rows, cur, import_batch_id, delete_account_ids, report_dates)
+            else:
+                persist_ad_rows(rows, cur, import_batch_id, delete_account_ids, report_dates)
         conn.commit()
 
 
@@ -351,13 +434,13 @@ def main() -> None:
         raise RuntimeError('META_ACCESS_TOKEN is missing in /10.work/03.KPdash/.env')
 
     account_id = meta_account_id(raw_account_id)
-    first_url = build_insights_url(account_id, access_token, api_version, since, until)
+    first_url = build_insights_url(account_id, access_token, api_version, since, until, args.level)
     first_payload = fetch_json(first_url)
-    rows = build_rows(first_payload)
-    print_summary(rows, account_id, since, until)
+    rows = build_rows(first_payload, args.level, account_id, access_token, api_version, since, until)
+    print_summary(rows, account_id, since, until, args.level)
     if args.dry_run:
         return
-    persist_rows(rows, cfg, account_id, since, until)
+    persist_rows(rows, cfg, account_id, since, until, args.level)
 
 
 if __name__ == '__main__':
