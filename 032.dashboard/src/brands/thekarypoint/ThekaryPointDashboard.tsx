@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
-import PptxGenJS from 'pptxgenjs'
 import {
   BellRing,
   ChevronDown,
@@ -30,7 +27,6 @@ import {
   YAxis,
 } from 'recharts'
 import thekaryPointLogo from '../../../assets/thekary-point-logo-reference.jpg'
-import { generateEditableReportPpt } from '../../pptEditableReport'
 import { getDashboardLoadErrorMessage, sourceSheetUrl, supabase } from '../../lib/supabase'
 
 type MonthlyOverviewRow = {
@@ -144,8 +140,8 @@ type ReportExportMode = 'pdf' | 'ppt' | 'ppt2'
 const MEMBER_TARGET_2026 = 280_000
 const APP_DOWNLOAD_TARGET_2026 = 130_000
 
-const DASHBOARD_PASSWORD = 'thekary'
-const DASHBOARD_AUTH_KEY = 'thekary-dashboard-authenticated'
+const DASHBOARD_PASSWORD = import.meta.env.VITE_DASHBOARD_PASSWORD as string | undefined
+const DASHBOARD_AUTH_KEY = (import.meta.env.VITE_DASHBOARD_AUTH_KEY as string | undefined) ?? 'thekary-dashboard-authenticated'
 
 const REPORT_STEPS = [
   { key: 'summary', label: 'SUMMARY' },
@@ -533,6 +529,10 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
 
   function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!DASHBOARD_PASSWORD) {
+      setPasswordError('dashboard/.env.local에 VITE_DASHBOARD_PASSWORD를 먼저 추가해줘.')
+      return
+    }
     if (passwordInput.trim() !== DASHBOARD_PASSWORD) {
       setPasswordError('비밀번호가 올바르지 않습니다.')
       return
@@ -867,6 +867,8 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
 
   async function captureReportPage(element: HTMLDivElement | null) {
     if (!element) throw new Error('리포트 페이지를 찾을 수 없습니다.')
+
+    const { default: html2canvas } = await import('html2canvas')
     const canvas = await html2canvas(element, {
       scale: 1.5,
       backgroundColor: '#ffffff',
@@ -954,6 +956,7 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
       }
 
       if (mode === 'pdf') {
+        const { default: jsPDF } = await import('jspdf')
         const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1920, 1080] })
         const pageWidth = pdf.internal.pageSize.getWidth()
         const pageHeight = pdf.internal.pageSize.getHeight()
@@ -969,6 +972,7 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
       }
 
       if (mode === 'ppt') {
+        const { default: PptxGenJS } = await import('pptxgenjs')
         const pptx = new PptxGenJS()
         pptx.layout = 'LAYOUT_WIDE'
         pptx.author = 'Hermes'
@@ -986,6 +990,7 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
         return
       }
 
+      const { generateEditableReportPpt } = await import('../../pptEditableReport')
       await generateEditableReportPpt({
         reportMonthKey: monthLabel(currentRow.report_month),
         monthLabelKorean: monthLabelKorean(currentRow.report_month),
