@@ -101,6 +101,29 @@ type AggregateMetrics = {
   purchaseValue: number
 }
 
+type AggregatedCreativeRow = {
+  campaign_group: string
+  ad_key: string
+  ad_name: string
+  impressions: number
+  clicks: number
+  ad_spend: number
+  purchase_count: number
+  purchase_value: number
+}
+
+type SummaryRow = {
+  key: string
+  label: string
+  impressions: number
+  clicks: number
+  ctr: number | null
+  adSpend: number
+  purchaseCount: number
+  purchaseValue: number
+  roas: number | null
+}
+
 const numberFormatter = new Intl.NumberFormat('ko-KR')
 const currencyFormatter = new Intl.NumberFormat('ko-KR', {
   style: 'currency',
@@ -207,6 +230,69 @@ function formatTableRatio(value: number | null | undefined, digits: 0 | 2 = 2) {
   return formatRatioFixed(value, digits)
 }
 
+function washCreativeName(rawName: string | null | undefined, reportMonth: string) {
+  const normalized = (rawName ?? '').trim()
+  if (!normalized) return '소재명 없음'
+
+  const datePrefixMatch = normalized.match(/^(\d{2})(\d{2})~(\d{2})(\d{2})_(.+)$/)
+  if (datePrefixMatch) {
+    const startMonth = Number(datePrefixMatch[1])
+    const reportMonthNumber = Number(reportMonth.slice(5, 7))
+    const expectedPreviousMonth = reportMonthNumber === 1 ? 12 : reportMonthNumber - 1
+    if (startMonth === expectedPreviousMonth && startMonth !== reportMonthNumber) {
+      return '전월소재'
+    }
+  }
+
+  return normalized
+    .replace(/^\d{4}~\d{4}_/, '')
+    .replace(/_(슬라이드|단일이미지|단일 이미지)$/, '')
+    .trim()
+}
+
+function toMetricsFromCreativeRows(rows: AggregatedCreativeRow[]): AggregateMetrics {
+  return rows.reduce(
+    (acc, row) => ({
+      impressions: acc.impressions + row.impressions,
+      clicks: acc.clicks + row.clicks,
+      adSpend: acc.adSpend + row.ad_spend,
+      purchaseCount: acc.purchaseCount + row.purchase_count,
+      purchaseValue: acc.purchaseValue + row.purchase_value,
+    }),
+    { impressions: 0, clicks: 0, adSpend: 0, purchaseCount: 0, purchaseValue: 0 },
+  )
+}
+
+function toMetricsFromDailyRows(rows: IcebiscuitDailyRow[]): AggregateMetrics {
+  return aggregateMetrics(
+    rows.map((row) => ({
+      impressions: row.impressions,
+      clicks: row.clicks,
+      ad_spend: row.ad_spend,
+      purchase_count: row.purchase_count,
+      purchase_value: row.purchase_value,
+    })),
+  )
+}
+
+function toDailyTotalsByDate(rows: IcebiscuitDailyRow[]) {
+  const grouped = new Map<string, AggregateMetrics>()
+
+  rows.forEach((row) => {
+    const current = grouped.get(row.report_date) ?? { impressions: 0, clicks: 0, adSpend: 0, purchaseCount: 0, purchaseValue: 0 }
+    current.impressions += row.impressions ?? 0
+    current.clicks += row.clicks ?? 0
+    current.adSpend += row.ad_spend ?? 0
+    current.purchaseCount += row.purchase_count ?? 0
+    current.purchaseValue += row.purchase_value ?? 0
+    grouped.set(row.report_date, current)
+  })
+
+  return Array.from(grouped.entries())
+    .map(([reportDate, metrics]) => ({ reportDate, ...metrics }))
+    .sort((a, b) => a.reportDate.localeCompare(b.reportDate))
+}
+
 function toDateInputValue(value: Date) {
   return value.toISOString().slice(0, 10)
 }
@@ -218,6 +304,15 @@ function startOfMonthIso(value: string) {
 function endOfMonthIso(value: string) {
   const [year, month] = value.slice(0, 7).split('-').map(Number)
   return toDateInputValue(new Date(year, month, 0))
+}
+
+function shiftMonthIso(value: string, monthDelta: number) {
+  const [year, month] = value.slice(0, 7).split('-').map(Number)
+  return toDateInputValue(new Date(year, month - 1 + monthDelta, 1))
+}
+
+function monthKeyFromDate(value: string) {
+  return value.slice(0, 7)
 }
 
 function aggregateMetrics(rows: Array<{ impressions: number | null; clicks: number | null; ad_spend: number | null; purchase_count: number | null; purchase_value: number | null }>): AggregateMetrics {
@@ -280,7 +375,7 @@ export default function IcebiscuitDashboard() {
   const [endDate, setEndDate] = useState('')
   const [activePreset, setActivePreset] = useState<DateRangePreset | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('campaign')
-  const [expandedCampaigns, setExpandedCampaigns] = useState<string[]>([])
+  const [showCampaignCreatives, setShowCampaignCreatives] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -424,29 +519,16 @@ export default function IcebiscuitDashboard() {
     })
   }, [filteredCampaigns])
 
-  const creativeTableRows = useMemo(() => {
-    const grouped = new Map<
-      string,
-      {
-        campaign_group: string
-        ad_id: string
-        ad_name: string
-        impressions: number
-        clicks: number
-        ad_spend: number
-        purchase_count: number
-        purchase_value: number
-      }
-    >()
+  const campaignCreativeRows = useMemo(() => {
+    const grouped = new Map<string, AggregatedCreativeRow>()
 
     filteredCreatives.forEach((row) => {
-      const adId = row.ad_id ?? row.ad_name ?? 'unknown'
-      const adName = row.ad_name ?? '소재명 없음'
+      const adName = washCreativeName(row.ad_name, row.report_month)
       const campaignGroup = formatCampaignName(row.campaign_group)
-      const key = `${campaignGroup}::${adId}`
+      const key = `${campaignGroup}::${adName}`
       const current = grouped.get(key) ?? {
         campaign_group: campaignGroup,
-        ad_id: adId,
+        ad_key: key,
         ad_name: adName,
         impressions: 0,
         clicks: 0,
@@ -463,21 +545,48 @@ export default function IcebiscuitDashboard() {
     })
 
     return Array.from(grouped.values()).sort((a, b) => {
-      const rankDiff = campaignSortRank(a.campaign_group) - campaignSortRank(b.campaign_group)
-      if (rankDiff !== 0) return rankDiff
-      return a.ad_name.localeCompare(b.ad_name, 'ko')
+      const nameDiff = a.ad_name.localeCompare(b.ad_name, 'ko')
+      if (nameDiff !== 0) return nameDiff
+      return campaignSortRank(a.campaign_group) - campaignSortRank(b.campaign_group)
     })
   }, [filteredCreatives])
 
+  const creativeTableRows = useMemo(() => {
+    const grouped = new Map<string, AggregatedCreativeRow>()
+
+    filteredCreatives.forEach((row) => {
+      const adName = washCreativeName(row.ad_name, row.report_month)
+      const key = adName
+      const current = grouped.get(key) ?? {
+        campaign_group: '',
+        ad_key: key,
+        ad_name: adName,
+        impressions: 0,
+        clicks: 0,
+        ad_spend: 0,
+        purchase_count: 0,
+        purchase_value: 0,
+      }
+      current.impressions += row.impressions ?? 0
+      current.clicks += row.clicks ?? 0
+      current.ad_spend += row.ad_spend ?? 0
+      current.purchase_count += row.purchase_count ?? 0
+      current.purchase_value += row.purchase_value ?? 0
+      grouped.set(key, current)
+    })
+
+    return Array.from(grouped.values()).sort((a, b) => a.ad_name.localeCompare(b.ad_name, 'ko'))
+  }, [filteredCreatives])
+
   const creativeRowsByCampaign = useMemo(() => {
-    const grouped = new Map<string, typeof creativeTableRows>()
-    creativeTableRows.forEach((row) => {
+    const grouped = new Map<string, AggregatedCreativeRow[]>()
+    campaignCreativeRows.forEach((row) => {
       const current = grouped.get(row.campaign_group) ?? []
       current.push(row)
       grouped.set(row.campaign_group, current)
     })
     return grouped
-  }, [creativeTableRows])
+  }, [campaignCreativeRows])
 
   const campaignTotals = useMemo(
     () =>
@@ -494,36 +603,28 @@ export default function IcebiscuitDashboard() {
     [campaignTableRows],
   )
 
-  const dailyTotals = useMemo(() => aggregateMetrics(filteredDaily), [filteredDaily])
+  const creativeTotals = useMemo(() => toMetricsFromCreativeRows(creativeTableRows), [creativeTableRows])
+  const dailyRowsByDate = useMemo(() => toDailyTotalsByDate(filteredDaily), [filteredDaily])
+  const dailyTotals = useMemo(() => toMetricsFromDailyRows(filteredDaily), [filteredDaily])
   const overviewTotals = useMemo(() => aggregateMetrics(filteredOverview), [filteredOverview])
 
-  const activeMetrics = viewMode === 'daily' ? dailyTotals : overviewTotals
+  const activeMetrics = viewMode === 'daily' ? dailyTotals : viewMode === 'creative' ? creativeTotals : overviewTotals
   const activeCtr = activeMetrics.impressions > 0 ? activeMetrics.clicks / activeMetrics.impressions : null
   const activeRoas = activeMetrics.adSpend > 0 ? activeMetrics.purchaseValue / activeMetrics.adSpend : null
 
-  const summaryRows = useMemo(() => {
-    if (viewMode === 'daily') {
-      return filteredDaily.map((row) => ({
-        key: `${row.report_date}-${row.campaign_name}`,
-        label: dayLabel(row.report_date),
-        secondary: row.campaign_name ?? '-',
-        impressions: row.impressions ?? 0,
-        clicks: row.clicks ?? 0,
-        ctr: row.ctr,
-        adSpend: row.ad_spend ?? 0,
-        purchaseCount: row.purchase_count ?? 0,
-        purchaseValue: row.purchase_value ?? 0,
-        roas: row.roas,
-      }))
-    }
+  const summaryRows = useMemo<SummaryRow[]>(() => {
+    if (!normalizedRange.end) return []
 
-    return filteredOverview
+    const endMonth = monthKeyFromDate(normalizedRange.end)
+    const windowStart = monthKeyFromDate(shiftMonthIso(normalizedRange.end, -5))
+
+    return orderedOverview
+      .filter((row) => row.report_month >= windowStart && row.report_month <= endMonth)
       .slice()
       .reverse()
       .map((row) => ({
         key: row.report_month,
         label: monthLabel(row.report_month),
-        secondary: '',
         impressions: row.impressions ?? 0,
         clicks: row.clicks ?? 0,
         ctr: row.ctr,
@@ -532,10 +633,10 @@ export default function IcebiscuitDashboard() {
         purchaseValue: row.purchase_value ?? 0,
         roas: row.roas,
       }))
-  }, [filteredDaily, filteredOverview, viewMode])
+  }, [normalizedRange.end, orderedOverview])
 
-  const activeTableTitle = viewMode === 'daily' ? '일별 핵심 지표 요약' : '선택 기간 월별 핵심 지표 요약'
-  const activeTableEyebrow = viewMode === 'daily' ? '선택 기간 일별' : '선택 기간 월별'
+  const activeTableTitle = '월별 핵심 지표 요약'
+  const activeTableEyebrow = normalizedRange.end ? `${monthKeyFromDate(normalizedRange.end)} 종료월 기준` : '종료월 기준'
   const periodLabel = normalizedRange.start && normalizedRange.end ? `${normalizedRange.start} ~ ${normalizedRange.end}` : '기간 선택 필요'
 
   if (loading) {
@@ -592,12 +693,6 @@ export default function IcebiscuitDashboard() {
     setStartDate(next.start)
     setEndDate(next.end)
     setActivePreset(null)
-  }
-
-  const toggleCampaignExpansion = (campaignName: string) => {
-    setExpandedCampaigns((current) =>
-      current.includes(campaignName) ? current.filter((item) => item !== campaignName) : [...current, campaignName],
-    )
   }
 
   return (
@@ -682,14 +777,14 @@ export default function IcebiscuitDashboard() {
             <table className="icebiscuit-dashboard__equal-table icebiscuit-dashboard__equal-table--summary">
               <thead>
                 <tr>
-                  <th>{viewMode === 'daily' ? '일자' : '월'}</th>
-                  <th>{viewMode === 'daily' ? '분류' : '노출'}</th>
-                  <th>{viewMode === 'daily' ? '노출' : '클릭'}</th>
-                  <th>{viewMode === 'daily' ? '클릭' : 'CTR'}</th>
-                  <th>{viewMode === 'daily' ? 'CTR' : '광고비'}</th>
-                  <th>{viewMode === 'daily' ? '광고비' : '구매'}</th>
-                  <th>{viewMode === 'daily' ? '구매' : '금액'}</th>
-                  <th>{viewMode === 'daily' ? '금액' : 'ROAS'}</th>
+                  <th>월</th>
+                  <th>노출</th>
+                  <th>클릭</th>
+                  <th>CTR</th>
+                  <th>광고비</th>
+                  <th>구매</th>
+                  <th>금액</th>
+                  <th>ROAS</th>
                 </tr>
               </thead>
               <tbody>
@@ -697,19 +792,19 @@ export default function IcebiscuitDashboard() {
                   summaryRows.map((row) => (
                     <tr key={row.key}>
                       <td>{row.label}</td>
-                      <td>{viewMode === 'daily' ? row.secondary : formatTableNumber(row.impressions)}</td>
-                      <td>{viewMode === 'daily' ? formatTableNumber(row.impressions) : formatTableNumber(row.clicks)}</td>
-                      <td>{viewMode === 'daily' ? formatTableNumber(row.clicks) : formatTableRatio(row.ctr, 2)}</td>
-                      <td>{viewMode === 'daily' ? formatTableRatio(row.ctr, 2) : formatTableCurrency(row.adSpend)}</td>
-                      <td>{viewMode === 'daily' ? formatTableCurrency(row.adSpend) : formatTableNumber(row.purchaseCount)}</td>
-                      <td>{viewMode === 'daily' ? formatTableNumber(row.purchaseCount) : formatTableCurrency(row.purchaseValue)}</td>
-                      <td>{viewMode === 'daily' ? formatTableCurrency(row.purchaseValue) : formatTableRatio(row.roas, 0)}</td>
+                      <td>{formatTableNumber(row.impressions)}</td>
+                      <td>{formatTableNumber(row.clicks)}</td>
+                      <td>{formatTableRatio(row.ctr, 2)}</td>
+                      <td>{formatTableCurrency(row.adSpend)}</td>
+                      <td>{formatTableNumber(row.purchaseCount)}</td>
+                      <td>{formatTableCurrency(row.purchaseValue)}</td>
+                      <td>{formatTableRatio(row.roas, 0)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td colSpan={8} className="icebiscuit-dashboard__empty-cell">
-                      {viewMode === 'creative' ? '소재 데이터는 다음 단계에서 연결할 예정이야.' : '선택한 기간 데이터가 아직 없어.'}
+                      선택한 종료월 기준 지난 6개월 데이터가 아직 없어.
                     </td>
                   </tr>
                 )}
@@ -730,6 +825,15 @@ export default function IcebiscuitDashboard() {
                     : 'META 소재 성과'}
               </h2>
             </div>
+            {viewMode === 'campaign' ? (
+              <button
+                type="button"
+                className={`icebiscuit-dashboard__preset-button${showCampaignCreatives ? ' is-active' : ''}`}
+                onClick={() => setShowCampaignCreatives((current) => !current)}
+              >
+                {showCampaignCreatives ? '소재 전체 접기' : '소재 전체 보기'}
+              </button>
+            ) : null}
           </div>
           <div className="table-wrap">
             {viewMode === 'campaign' ? (
@@ -751,27 +855,9 @@ export default function IcebiscuitDashboard() {
                   {campaignTableRows.length ? (
                     campaignTableRows.flatMap((row) => {
                       const childRows = creativeRowsByCampaign.get(row.campaign_name) ?? []
-                      const isExpanded = expandedCampaigns.includes(row.campaign_name)
                       const parentRow = (
                         <tr key={row.campaign_name}>
-                          <td>
-                            <div className="icebiscuit-dashboard__campaign-cell">
-                              {childRows.length ? (
-                                <button
-                                  type="button"
-                                  className="icebiscuit-dashboard__row-toggle"
-                                  onClick={() => toggleCampaignExpansion(row.campaign_name)}
-                                  aria-label={`${row.campaign_name} 소재 ${isExpanded ? '접기' : '펼치기'}`}
-                                  title={`${row.campaign_name} 소재 ${isExpanded ? '접기' : '펼치기'}`}
-                                >
-                                  {isExpanded ? '−' : '+'}
-                                </button>
-                              ) : (
-                                <span className="icebiscuit-dashboard__row-toggle icebiscuit-dashboard__row-toggle--placeholder">·</span>
-                              )}
-                              <span>{row.campaign_name}</span>
-                            </div>
-                          </td>
+                          <td>{row.campaign_name}</td>
                           <td>{formatTableNumber(row.impressions)}</td>
                           <td>{formatTableNumber(row.clicks)}</td>
                           <td>{formatTableRatio(row.impressions > 0 ? row.clicks / row.impressions : null, 2)}</td>
@@ -783,14 +869,14 @@ export default function IcebiscuitDashboard() {
                         </tr>
                       )
 
-                      if (!isExpanded || !childRows.length) {
+                      if (!showCampaignCreatives || !childRows.length) {
                         return [parentRow]
                       }
 
                       return [
                         parentRow,
                         ...childRows.map((child) => (
-                          <tr key={`${row.campaign_name}-${child.ad_id}`} className="icebiscuit-dashboard__child-row">
+                          <tr key={`${row.campaign_name}-${child.ad_key}`} className="icebiscuit-dashboard__child-row">
                             <td>
                               <div className="icebiscuit-dashboard__child-label">
                                 <span className="icebiscuit-dashboard__child-prefix">소재</span>
@@ -834,7 +920,6 @@ export default function IcebiscuitDashboard() {
                 <thead>
                   <tr>
                     <th>일자</th>
-                    <th>캠페인</th>
                     <th>노출</th>
                     <th>클릭</th>
                     <th>CTR</th>
@@ -845,29 +930,28 @@ export default function IcebiscuitDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDaily.length ? (
-                    filteredDaily.map((row) => (
-                      <tr key={`${row.report_date}-${row.campaign_name}`}>
-                        <td>{dayLabel(row.report_date)}</td>
-                        <td>{formatCampaignName(row.campaign_name)}</td>
+                  {dailyRowsByDate.length ? (
+                    dailyRowsByDate.map((row) => (
+                      <tr key={row.reportDate}>
+                        <td>{dayLabel(row.reportDate)}</td>
                         <td>{formatTableNumber(row.impressions)}</td>
                         <td>{formatTableNumber(row.clicks)}</td>
-                        <td>{formatTableRatio(row.ctr, 2)}</td>
-                        <td>{formatTableCurrency(row.ad_spend)}</td>
-                        <td>{formatTableNumber(row.purchase_count)}</td>
-                        <td>{formatTableCurrency(row.purchase_value)}</td>
-                        <td>{formatTableRatio(row.roas, 0)}</td>
+                        <td>{formatTableRatio(row.impressions > 0 ? row.clicks / row.impressions : null, 2)}</td>
+                        <td>{formatTableCurrency(row.adSpend)}</td>
+                        <td>{formatTableNumber(row.purchaseCount)}</td>
+                        <td>{formatTableCurrency(row.purchaseValue)}</td>
+                        <td>{formatTableRatio(row.adSpend > 0 ? row.purchaseValue / row.adSpend : null, 0)}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={9} className="icebiscuit-dashboard__empty-cell">선택한 기간의 daily 데이터가 아직 없어.</td>
+                      <td colSpan={8} className="icebiscuit-dashboard__empty-cell">선택한 기간의 daily 데이터가 아직 없어.</td>
                     </tr>
                   )}
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={2}>Total</td>
+                    <td>Total</td>
                     <td>{formatTableNumber(dailyTotals.impressions)}</td>
                     <td>{formatTableNumber(dailyTotals.clicks)}</td>
                     <td>{formatTableRatio(activeCtr, 2)}</td>
@@ -883,28 +967,28 @@ export default function IcebiscuitDashboard() {
                 <thead>
                   <tr>
                     <th>소재</th>
-                    <th>상위 캠페인</th>
                     <th>노출</th>
                     <th>클릭</th>
                     <th>CTR</th>
                     <th>광고비</th>
                     <th>구매</th>
                     <th>기여매출</th>
+                    <th>구매율</th>
                     <th>ROAS</th>
                   </tr>
                 </thead>
                 <tbody>
                   {creativeTableRows.length ? (
                     creativeTableRows.map((row) => (
-                      <tr key={`${row.campaign_group}-${row.ad_id}`}>
+                      <tr key={row.ad_key}>
                         <td>{row.ad_name}</td>
-                        <td>{row.campaign_group}</td>
                         <td>{formatTableNumber(row.impressions)}</td>
                         <td>{formatTableNumber(row.clicks)}</td>
                         <td>{formatTableRatio(row.impressions > 0 ? row.clicks / row.impressions : null, 2)}</td>
                         <td>{formatTableCurrency(row.ad_spend)}</td>
                         <td>{formatTableNumber(row.purchase_count)}</td>
                         <td>{formatTableCurrency(row.purchase_value)}</td>
+                        <td>{formatTableRatio(row.clicks > 0 ? row.purchase_count / row.clicks : null, 2)}</td>
                         <td>{formatTableRatio(row.ad_spend > 0 ? row.purchase_value / row.ad_spend : null, 0)}</td>
                       </tr>
                     ))
