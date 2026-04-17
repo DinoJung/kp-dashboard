@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Coins, Megaphone, MousePointerClick, ShoppingBag, Target, Users } from 'lucide-react'
+import { Coins, Megaphone, MousePointerClick, ShoppingBag, Target, TrendingUp, Users } from 'lucide-react'
 import { getDashboardLoadErrorMessage, supabase } from '../../lib/supabase'
 
 type IcebiscuitOverviewRow = {
@@ -68,6 +68,15 @@ const ratioPercentFormatter = new Intl.NumberFormat('ko-KR', {
   style: 'percent',
   maximumFractionDigits: 1,
 })
+const ratioPercentFormatter2 = new Intl.NumberFormat('ko-KR', {
+  style: 'percent',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+const ratioPercentFormatter0 = new Intl.NumberFormat('ko-KR', {
+  style: 'percent',
+  maximumFractionDigits: 0,
+})
 
 function monthLabel(value: string) {
   return value.slice(0, 7)
@@ -88,29 +97,14 @@ function formatCurrency(value: number | null | undefined) {
   return currencyFormatter.format(Math.round(value))
 }
 
-function formatNullableCurrency(value: number | null | undefined) {
-  if (value === null || value === undefined || value === 0) return '-'
-  return currencyFormatter.format(Math.round(value))
-}
-
 function formatRatio(value: number | null | undefined) {
   if (value === null || value === undefined) return '-'
   return ratioPercentFormatter.format(value)
 }
 
-function formatNullableRatio(value: number | null | undefined) {
-  if (value === null || value === undefined || value === 0) return '-'
-  return ratioPercentFormatter.format(value)
-}
-
-function formatSignedDelta(current: number | null | undefined, previous: number | null | undefined, formatter: (value: number) => string, empty = '전월 비교 데이터 없음') {
-  if (current === null || current === undefined || previous === null || previous === undefined) {
-    return empty
-  }
-  const diff = current - previous
-  if (diff === 0) return '전월과 동일'
-  const sign = diff > 0 ? '+' : ''
-  return `${sign}${formatter(diff)}`
+function formatRatioFixed(value: number | null | undefined, digits: 0 | 2 = 2) {
+  if (value === null || value === undefined) return '-'
+  return digits === 0 ? ratioPercentFormatter0.format(value) : ratioPercentFormatter2.format(value)
 }
 
 function formatPercentChange(current: number | null | undefined, previous: number | null | undefined) {
@@ -122,6 +116,26 @@ function formatPercentChange(current: number | null | undefined, previous: numbe
   return `${sign}${ratioPercentFormatter.format(change)}`
 }
 
+function formatDirectionalPercentChange(current: number | null | undefined, previous: number | null | undefined) {
+  if (current === null || current === undefined || previous === null || previous === undefined || previous === 0) {
+    return '전월 비교 데이터 없음'
+  }
+  const change = (current - previous) / previous
+  if (change === 0) return '전월과 동일'
+  const direction = change > 0 ? '증가' : '감소'
+  return `전월 대비 ${direction} ${ratioPercentFormatter.format(Math.abs(change))}`
+}
+
+function formatPercentPointDelta(current: number | null | undefined, previous: number | null | undefined) {
+  if (current === null || current === undefined || previous === null || previous === undefined) {
+    return '전월 비교 데이터 없음'
+  }
+  const diff = (current - previous) * 100
+  if (diff === 0) return '전월과 동일'
+  const direction = diff > 0 ? '증가' : '감소'
+  return `전월 대비 ${direction} ${Math.abs(diff).toFixed(2)}%p`
+}
+
 function formatObjectiveLabel(value: string | null | undefined) {
   const normalized = value?.trim() ?? ''
   if (!normalized) return '-'
@@ -130,7 +144,7 @@ function formatObjectiveLabel(value: string | null | undefined) {
   if (lower.includes('sales') || lower.includes('purchase')) return '구매전환'
   if (lower.includes('traffic')) return '트래픽'
   if (lower.includes('awareness') || lower.includes('reach')) return '도달'
-  if (lower.includes('engagement')) return '참여'
+  if (lower.includes('engagement')) return '게시물참여'
   if (lower.includes('lead')) return '리드'
 
   return normalized
@@ -139,13 +153,43 @@ function formatObjectiveLabel(value: string | null | undefined) {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
+function formatCampaignName(value: string | null | undefined) {
+  const normalized = value?.trim() ?? ''
+  if (!normalized) return '-'
+  if (normalized === 'ASC_전체 라인업 캠페인') return 'ASC'
+  if (normalized === '리타겟팅 캠페인') return '리타겟팅'
+  if (normalized === '전환 캠페인(패션 관심사)') return '전환(패션관심)'
+  return normalized
+}
+
+function formatCampaignDisplayName(row: IcebiscuitCampaignRow) {
+  const baseName = formatCampaignName(row.campaign_name)
+  const objectiveLabel = formatObjectiveLabel(row.objective)
+  if (objectiveLabel === '게시물참여') return `${baseName} / 게시물참여`
+  return baseName
+}
+
 function campaignSortRank(row: IcebiscuitCampaignRow) {
-  const objective = (row.objective ?? '').toLowerCase()
-  const name = (row.campaign_name ?? '').toLowerCase()
-  if (objective.includes('sales') || objective.includes('purchase') || name.includes('purchase')) return 0
-  if (objective.includes('traffic') || name.includes('traffic')) return 1
-  if (objective.includes('awareness')) return 2
+  const label = formatCampaignName(row.campaign_name)
+  if (label === 'ASC') return 0
+  if (label === '리타겟팅') return 1
+  if (label === '전환(패션관심)') return 2
   return 3
+}
+
+function formatTableNumber(value: number | null | undefined) {
+  if (value === null || value === undefined || value === 0) return '-'
+  return numberFormatter.format(value)
+}
+
+function formatTableCurrency(value: number | null | undefined) {
+  if (value === null || value === undefined || value === 0) return '-'
+  return currencyFormatter.format(Math.round(value))
+}
+
+function formatTableRatio(value: number | null | undefined, digits: 0 | 2 = 2) {
+  if (value === null || value === undefined || value === 0) return '-'
+  return formatRatioFixed(value, digits)
 }
 
 async function fetchIcebiscuitDashboardData() {
@@ -175,8 +219,8 @@ function MetricCard({ title, value, delta, helper, accent, icon, valueSize = 'de
         <span className="metric-card__title">{title}</span>
       </div>
       <strong className={`metric-card__value${valueSize === 'compact' ? ' metric-card__value--compact' : ''}`}>{value}</strong>
-      <p className="metric-card__delta">{delta}</p>
-      <p className="metric-card__helper">{helper}</p>
+      {delta ? <p className="metric-card__delta">{delta}</p> : null}
+      {helper ? <p className="metric-card__helper">{helper}</p> : null}
     </article>
   )
 }
@@ -276,6 +320,7 @@ export default function IcebiscuitDashboard() {
 
   const totalCtr = campaignTotals.impressions > 0 ? campaignTotals.clicks / campaignTotals.impressions : null
   const totalRoas = campaignTotals.adSpend > 0 ? campaignTotals.purchaseValue / campaignTotals.adSpend : null
+  const totalPurchaseRate = campaignTotals.clicks > 0 ? campaignTotals.purchaseCount / campaignTotals.clicks : null
 
   if (loading) {
     return (
@@ -318,7 +363,6 @@ export default function IcebiscuitDashboard() {
         <div>
           <p className="eyebrow">ICEBISCUIT META</p>
           <h1 className="icebiscuit-dashboard__title">월간 광고 성과 대시보드</h1>
-          <p className="icebiscuit-dashboard__description">아이스비스킷 기준 META 월간 광고 성과를 확인합니다.</p>
         </div>
         <div className="topbar__actions">
           <label className="month-selector">
@@ -335,56 +379,64 @@ export default function IcebiscuitDashboard() {
         </div>
       </header>
 
-      <section className="metrics-grid metrics-grid--six">
+      <section className="metrics-grid metrics-grid--seven">
         <MetricCard
-          title="광고비"
-          value={formatCurrency(currentRow.ad_spend)}
-          delta={formatPercentChange(currentRow.ad_spend, previousRow?.ad_spend)}
-          helper="월간 총 spend"
-          accent="amber"
-          icon={<Coins size={18} />}
-          valueSize="compact"
-        />
-        <MetricCard
-          title="노출수"
+          title="노출"
           value={formatNumber(currentRow.impressions)}
-          delta={formatSignedDelta(currentRow.impressions, previousRow?.impressions, (value) => numberFormatter.format(value))}
-          helper={`도달 ${formatNumber(currentRow.reach)}`}
+          delta={formatDirectionalPercentChange(currentRow.impressions, previousRow?.impressions)}
+          helper=""
           accent="slate"
           icon={<Megaphone size={18} />}
         />
         <MetricCard
-          title="클릭수"
+          title="클릭"
           value={formatNumber(currentRow.clicks)}
-          delta={formatSignedDelta(currentRow.clicks, previousRow?.clicks, (value) => numberFormatter.format(value))}
-          helper={`랜딩페이지뷰 ${formatNumber(currentRow.landing_page_views)}`}
+          delta={formatDirectionalPercentChange(currentRow.clicks, previousRow?.clicks)}
+          helper=""
           accent="emerald"
           icon={<MousePointerClick size={18} />}
         />
         <MetricCard
           title="CTR"
-          value={formatRatio(currentRow.ctr)}
-          delta={formatPercentChange(currentRow.ctr, previousRow?.ctr)}
-          helper={`CPC ${formatCurrency(currentRow.cpc)}`}
+          value={formatRatioFixed(currentRow.ctr, 2)}
+          delta={formatPercentPointDelta(currentRow.ctr, previousRow?.ctr)}
+          helper=""
           accent="gray"
           icon={<Target size={18} />}
         />
         <MetricCard
-          title="구매건수"
+          title="광고비"
+          value={formatCurrency(currentRow.ad_spend)}
+          delta=""
+          helper=""
+          accent="amber"
+          icon={<Coins size={18} />}
+          valueSize="compact"
+        />
+        <MetricCard
+          title="구매"
           value={formatNumber(currentRow.purchase_count)}
-          delta={formatSignedDelta(currentRow.purchase_count, previousRow?.purchase_count, (value) => numberFormatter.format(value))}
-          helper={`전환수 ${formatNumber(currentRow.conversions)}`}
+          delta=""
+          helper=""
           accent="rose"
           icon={<ShoppingBag size={18} />}
         />
         <MetricCard
-          title="구매금액 / ROAS"
+          title="금액"
           value={formatCurrency(currentRow.purchase_value)}
           delta={formatPercentChange(currentRow.purchase_value, previousRow?.purchase_value)}
-          helper={`ROAS ${formatRatio(currentRow.roas)}`}
+          helper=""
           accent="violet"
           icon={<Users size={18} />}
           valueSize="compact"
+        />
+        <MetricCard
+          title="ROAS"
+          value={formatRatioFixed(currentRow.roas, 0)}
+          delta={formatDirectionalPercentChange(currentRow.roas, previousRow?.roas)}
+          helper=""
+          accent="sky"
+          icon={<TrendingUp size={18} />}
         />
       </section>
 
@@ -397,16 +449,16 @@ export default function IcebiscuitDashboard() {
             </div>
           </div>
           <div className="table-wrap">
-            <table>
+            <table className="icebiscuit-dashboard__equal-table icebiscuit-dashboard__equal-table--summary">
               <thead>
                 <tr>
                   <th>월</th>
-                  <th>광고비</th>
                   <th>노출</th>
                   <th>클릭</th>
                   <th>CTR</th>
-                  <th>구매건수</th>
-                  <th>구매금액</th>
+                  <th>광고비</th>
+                  <th>구매</th>
+                  <th>금액</th>
                   <th>ROAS</th>
                 </tr>
               </thead>
@@ -414,13 +466,13 @@ export default function IcebiscuitDashboard() {
                 {recentMonths.slice().reverse().map((row) => (
                   <tr key={row.report_month} className={row.report_month === currentRow.report_month ? 'is-selected' : ''}>
                     <td>{monthLabel(row.report_month)}</td>
-                    <td>{formatCurrency(row.ad_spend)}</td>
-                    <td>{formatNumber(row.impressions)}</td>
-                    <td>{formatNumber(row.clicks)}</td>
-                    <td>{formatRatio(row.ctr)}</td>
-                    <td>{formatNumber(row.purchase_count)}</td>
-                    <td>{formatCurrency(row.purchase_value)}</td>
-                    <td>{formatRatio(row.roas)}</td>
+                    <td>{formatTableNumber(row.impressions)}</td>
+                    <td>{formatTableNumber(row.clicks)}</td>
+                    <td>{formatTableRatio(row.ctr, 2)}</td>
+                    <td>{formatTableCurrency(row.ad_spend)}</td>
+                    <td>{formatTableNumber(row.purchase_count)}</td>
+                    <td>{formatTableCurrency(row.purchase_value)}</td>
+                    <td>{formatTableRatio(row.roas, 0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -436,17 +488,17 @@ export default function IcebiscuitDashboard() {
             </div>
           </div>
           <div className="table-wrap">
-            <table>
+            <table className="icebiscuit-dashboard__equal-table icebiscuit-dashboard__equal-table--campaign">
               <thead>
                 <tr>
                   <th>캠페인</th>
-                  <th>목표</th>
-                  <th>광고비</th>
                   <th>노출</th>
                   <th>클릭</th>
-                  <th>랜딩페이지뷰</th>
-                  <th>구매건수</th>
-                  <th>구매금액</th>
+                  <th>CTR</th>
+                  <th>광고비</th>
+                  <th>구매</th>
+                  <th>기여매출</th>
+                  <th>구매율</th>
                   <th>ROAS</th>
                 </tr>
               </thead>
@@ -454,15 +506,15 @@ export default function IcebiscuitDashboard() {
                 {campaignsForMonth.length ? (
                   campaignsForMonth.map((row) => (
                     <tr key={`${row.report_month}-${row.campaign_id}-${row.campaign_name}`}>
-                      <td>{row.campaign_name ?? '-'}</td>
-                      <td>{formatObjectiveLabel(row.objective)}</td>
-                      <td>{formatNullableCurrency(row.ad_spend)}</td>
-                      <td>{formatNumber(row.impressions)}</td>
-                      <td>{formatNumber(row.clicks)}</td>
-                      <td>{formatNumber(row.landing_page_views)}</td>
-                      <td>{formatNumber(row.purchase_count)}</td>
-                      <td>{formatNullableCurrency(row.purchase_value)}</td>
-                      <td>{formatNullableRatio(row.roas)}</td>
+                      <td>{formatCampaignDisplayName(row)}</td>
+                      <td>{formatTableNumber(row.impressions)}</td>
+                      <td>{formatTableNumber(row.clicks)}</td>
+                      <td>{formatTableRatio(row.ctr, 2)}</td>
+                      <td>{formatTableCurrency(row.ad_spend)}</td>
+                      <td>{formatTableNumber(row.purchase_count)}</td>
+                      <td>{formatTableCurrency(row.purchase_value)}</td>
+                      <td>{formatTableRatio(row.clicks && row.clicks > 0 ? (row.purchase_count ?? 0) / row.clicks : null, 2)}</td>
+                      <td>{formatTableRatio(row.roas, 0)}</td>
                     </tr>
                   ))
                 ) : (
@@ -474,14 +526,14 @@ export default function IcebiscuitDashboard() {
               <tfoot>
                 <tr>
                   <td>Total</td>
-                  <td>-</td>
-                  <td>{formatCurrency(campaignTotals.adSpend)}</td>
-                  <td>{formatNumber(campaignTotals.impressions)}</td>
-                  <td>{formatNumber(campaignTotals.clicks)}</td>
-                  <td>{formatNumber(campaignTotals.landingPageViews)}</td>
-                  <td>{formatNumber(campaignTotals.purchaseCount)}</td>
-                  <td>{formatCurrency(campaignTotals.purchaseValue)}</td>
-                  <td>{formatRatio(totalRoas)}</td>
+                  <td>{formatTableNumber(campaignTotals.impressions)}</td>
+                  <td>{formatTableNumber(campaignTotals.clicks)}</td>
+                  <td>{formatTableRatio(totalCtr, 2)}</td>
+                  <td>{formatTableCurrency(campaignTotals.adSpend)}</td>
+                  <td>{formatTableNumber(campaignTotals.purchaseCount)}</td>
+                  <td>{formatTableCurrency(campaignTotals.purchaseValue)}</td>
+                  <td>{formatTableRatio(totalPurchaseRate, 2)}</td>
+                  <td>{formatTableRatio(totalRoas, 0)}</td>
                 </tr>
               </tfoot>
             </table>

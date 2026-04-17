@@ -270,8 +270,8 @@
   align-items: center;
   padding: 0 12px;
   border-radius: 999px;
-  background: #fff7ed;
-  color: #c2410c;
+  background: #eaf2ff;
+  color: #0047ab;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -385,7 +385,7 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #f59e0b;
+  color: #0047ab;
 }
 
 .topbar__actions {
@@ -440,8 +440,8 @@
   min-height: 44px;
   padding: 0 14px;
   border-radius: 999px;
-  background: #fff7ed;
-  color: #c2410c;
+  background: #eaf2ff;
+  color: #0047ab;
   font-size: 13px;
   font-weight: 600;
   box-sizing: border-box;
@@ -711,6 +711,20 @@
 
 .table-wrap {
   overflow-x: auto;
+}
+
+.icebiscuit-dashboard__equal-table {
+  table-layout: fixed;
+}
+
+.icebiscuit-dashboard__equal-table--summary th,
+.icebiscuit-dashboard__equal-table--summary td {
+  width: calc(100% / 8);
+}
+
+.icebiscuit-dashboard__equal-table--campaign th,
+.icebiscuit-dashboard__equal-table--campaign td {
+  width: calc(100% / 9);
 }
 
 table {
