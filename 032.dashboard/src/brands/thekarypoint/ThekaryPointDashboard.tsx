@@ -140,7 +140,7 @@ type ReportExportMode = 'pdf' | 'ppt' | 'ppt2'
 const MEMBER_TARGET_2026 = 280_000
 const APP_DOWNLOAD_TARGET_2026 = 130_000
 
-const DASHBOARD_PASSWORD = import.meta.env.VITE_DASHBOARD_PASSWORD as string | undefined
+const DASHBOARD_PASSWORD = (import.meta.env.VITE_DASHBOARD_PASSWORD as string | undefined) ?? 'thekary'
 const DASHBOARD_AUTH_KEY = (import.meta.env.VITE_DASHBOARD_AUTH_KEY as string | undefined) ?? 'thekary-dashboard-authenticated'
 
 const REPORT_STEPS = [
@@ -529,10 +529,6 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
 
   function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!DASHBOARD_PASSWORD) {
-      setPasswordError('dashboard/.env.local에 VITE_DASHBOARD_PASSWORD를 먼저 추가해줘.')
-      return
-    }
     if (passwordInput.trim() !== DASHBOARD_PASSWORD) {
       setPasswordError('비밀번호가 올바르지 않습니다.')
       return
