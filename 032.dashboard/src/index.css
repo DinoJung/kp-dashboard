@@ -25,6 +25,7 @@ body {
   background:
     radial-gradient(circle at top, rgba(245, 158, 11, 0.12), transparent 24%),
     #f3f4f6;
+  scrollbar-gutter: stable;
 }
 
 body,

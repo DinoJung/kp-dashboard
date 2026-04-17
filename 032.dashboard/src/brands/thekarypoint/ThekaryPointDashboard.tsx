@@ -29,9 +29,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import thekaryPointLogo from '../../../assets/thekary-point-logo-reference.jpg'
 import { generateEditableReportPpt } from '../../pptEditableReport'
+import { getDashboardLoadErrorMessage, sourceSheetUrl, supabase } from '../../lib/supabase'
 
 type MonthlyOverviewRow = {
   report_month: string
@@ -147,10 +147,6 @@ const APP_DOWNLOAD_TARGET_2026 = 130_000
 const DASHBOARD_PASSWORD = 'thekary'
 const DASHBOARD_AUTH_KEY = 'thekary-dashboard-authenticated'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-const sourceSheetUrl = import.meta.env.VITE_SOURCE_SHEET_URL as string | undefined
-
 const REPORT_STEPS = [
   { key: 'summary', label: 'SUMMARY' },
   { key: 'exposure', label: 'EXPOSURE' },
@@ -190,9 +186,6 @@ const MONTHLY_INSIGHT_OVERRIDES: Record<string, Pick<InsightContent, 'resultAnal
     ],
   },
 }
-
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 const numberFormatter = new Intl.NumberFormat('ko-KR')
 const ratioPercentFormatter = new Intl.NumberFormat('ko-KR', {
@@ -462,7 +455,11 @@ async function fetchDashboardData() {
   } satisfies DashboardPayload
 }
 
-export default function ThekaryPointDashboard() {
+type ThekaryPointDashboardProps = {
+  onAuthStateChange?: (isAuthenticated: boolean) => void
+}
+
+export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPointDashboardProps) {
   const [data, setData] = useState<DashboardPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -494,6 +491,11 @@ export default function ThekaryPointDashboard() {
 
   useEffect(() => {
     if (!authChecked) return
+    onAuthStateChange?.(isAuthenticated)
+  }, [authChecked, isAuthenticated, onAuthStateChange])
+
+  useEffect(() => {
+    if (!authChecked) return
     if (!isAuthenticated) {
       setLoading(false)
       return
@@ -516,8 +518,7 @@ export default function ThekaryPointDashboard() {
         setSelectedMonth((current) => current || meaningfulMonths[0] || payload.overview[0]?.report_month || '')
       } catch (loadError) {
         if (!active) return
-        const message = loadError instanceof Error ? loadError.message : 'Unknown error'
-        setError(message)
+        setError(getDashboardLoadErrorMessage(loadError))
       } finally {
         if (active) setLoading(false)
       }

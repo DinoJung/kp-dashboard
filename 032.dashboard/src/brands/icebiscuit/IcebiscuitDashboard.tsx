@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { Coins, Megaphone, MousePointerClick, ShoppingBag, Target, Users } from 'lucide-react'
+import { getDashboardLoadErrorMessage, supabase } from '../../lib/supabase'
 
 type IcebiscuitOverviewRow = {
   report_month: string
@@ -57,11 +57,6 @@ type MetricCardProps = {
   icon: React.ReactNode
   valueSize?: 'default' | 'compact'
 }
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 const numberFormatter = new Intl.NumberFormat('ko-KR')
 const currencyFormatter = new Intl.NumberFormat('ko-KR', {
@@ -130,6 +125,14 @@ function formatPercentChange(current: number | null | undefined, previous: numbe
 function formatObjectiveLabel(value: string | null | undefined) {
   const normalized = value?.trim() ?? ''
   if (!normalized) return '-'
+
+  const lower = normalized.toLowerCase()
+  if (lower.includes('sales') || lower.includes('purchase')) return '구매전환'
+  if (lower.includes('traffic')) return '트래픽'
+  if (lower.includes('awareness') || lower.includes('reach')) return '도달'
+  if (lower.includes('engagement')) return '참여'
+  if (lower.includes('lead')) return '리드'
+
   return normalized
     .replaceAll('_', ' ')
     .toLowerCase()
@@ -197,8 +200,7 @@ export default function IcebiscuitDashboard() {
         setSelectedMonth((current) => current || payload.overview[0]?.report_month || '')
       } catch (loadError) {
         if (!active) return
-        const message = loadError instanceof Error ? loadError.message : 'Unknown error'
-        setError(message)
+        setError(getDashboardLoadErrorMessage(loadError))
       } finally {
         if (active) setLoading(false)
       }
@@ -315,10 +317,8 @@ export default function IcebiscuitDashboard() {
       <header className="topbar topbar--brand">
         <div>
           <p className="eyebrow">ICEBISCUIT META</p>
-          <h2 className="icebiscuit-dashboard__title">광고 성과 대시보드</h2>
-          <p className="icebiscuit-dashboard__description">
-            {currentRow.account_name ?? 'Icebiscuit'} 기준 META 월간 광고 성과를 분리해 본다.
-          </p>
+          <h1 className="icebiscuit-dashboard__title">월간 광고 성과 대시보드</h1>
+          <p className="icebiscuit-dashboard__description">아이스비스킷 기준 META 월간 광고 성과를 확인합니다.</p>
         </div>
         <div className="topbar__actions">
           <label className="month-selector">
@@ -432,7 +432,7 @@ export default function IcebiscuitDashboard() {
           <div className="panel__header">
             <div>
               <p className="panel__eyebrow">캠페인 상세</p>
-              <h2>META 캠페인 Breakdown</h2>
+              <h2>META 캠페인 성과</h2>
             </div>
           </div>
           <div className="table-wrap">
@@ -498,8 +498,8 @@ export default function IcebiscuitDashboard() {
           <div className="insight-empty-state insight-empty-state--brand">
             <strong>{monthLabelKorean(currentRow.report_month)} 기준</strong>
             <p>
-              현재 Icebiscuit 탭은 META API 기반 광고 KPI와 캠페인 breakdown만 분리해서 보여준다.
-              Thekary Point view/export 로직에는 연결하지 않고, 이 탭 안에서만 신규 public view를 조회한다.
+              현재 IB 탭은 META API 기반 광고 KPI와 캠페인 성과만 분리해 보여줍니다.
+              KP view/export 로직과는 분리된 상태로 이 탭 전용 public view만 조회합니다.
             </p>
             <p>
               총 CTR은 {formatRatio(totalCtr)}, 총 ROAS는 {formatRatio(totalRoas)}로 재계산했다.

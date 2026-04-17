@@ -23,7 +23,14 @@ PURCHASE_ACTION_TYPES = {
     'onsite_web_purchase',
     'omni_complete_payment',
 }
-CONVERSION_ACTION_TYPES = PURCHASE_ACTION_TYPES | {
+PURCHASE_ACTION_PRIORITY = (
+    'purchase',
+    'onsite_web_purchase',
+    'offsite_conversion.fb_pixel_purchase',
+    'omni_purchase',
+    'omni_complete_payment',
+)
+CONVERSION_ACTION_TYPES = {
     'complete_registration',
     'lead',
     'omni_activate_app',
@@ -89,7 +96,6 @@ def build_insights_url(account_id: str, access_token: str, api_version: str, sin
             'account_name',
             'campaign_id',
             'campaign_name',
-            'campaign_status',
             'objective',
             'buying_type',
             'impressions',
@@ -127,6 +133,38 @@ def sum_action_values(items: list[dict[str, Any]] | None, action_types: set[str]
     return total
 
 
+def select_primary_action_value(
+    items: list[dict[str, Any]] | None,
+    action_types: set[str],
+    priority: tuple[str, ...],
+) -> float:
+    candidates: dict[str, float] = {}
+    for item in items or []:
+        action_type = str(item.get('action_type', '')).strip()
+        if action_type not in action_types:
+            continue
+        try:
+            value = float(item.get('value', 0) or 0)
+        except (TypeError, ValueError):
+            continue
+        candidates[action_type] = value
+
+    for action_type in priority:
+        if action_type in candidates:
+            return candidates[action_type]
+
+    if candidates:
+        return max(candidates.values())
+    return 0.0
+
+
+def rows_account_ids(rows: list[dict[str, Any]], fallback_account_id: str) -> list[str]:
+    account_ids = sorted({str(row.get('account_id')).strip() for row in rows if row.get('account_id')})
+    if account_ids:
+        return account_ids
+    return [fallback_account_id.removeprefix('act_')]
+
+
 def normalize_int(value: Any) -> int | None:
     if value in {None, ''}:
         return None
@@ -153,6 +191,8 @@ def build_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
         for item in page.get('data', []):
             actions = item.get('actions') or []
             action_values = item.get('action_values') or []
+            purchase_count = normalize_int(select_primary_action_value(actions, PURCHASE_ACTION_TYPES, PURCHASE_ACTION_PRIORITY))
+            purchase_value = normalize_float(select_primary_action_value(action_values, PURCHASE_ACTION_TYPES, PURCHASE_ACTION_PRIORITY))
             report_date = parse_iso_date(item.get('date_start'))
             if not report_date:
                 continue
@@ -173,10 +213,10 @@ def build_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 'spend': normalize_float(item.get('spend')),
                 'cpc': normalize_float(item.get('cpc')),
                 'ctr': (normalize_float(item.get('ctr')) or 0.0) / 100 if item.get('ctr') not in {None, ''} else None,
-                'purchase_count': normalize_int(sum_action_values(actions, PURCHASE_ACTION_TYPES)),
-                'purchase_value': normalize_float(sum_action_values(action_values, PURCHASE_ACTION_TYPES)),
-                'conversions': normalize_int(sum_action_values(actions, CONVERSION_ACTION_TYPES)),
-                'conversion_value': normalize_float(sum_action_values(action_values, CONVERSION_ACTION_TYPES)),
+                'purchase_count': purchase_count,
+                'purchase_value': purchase_value,
+                'conversions': normalize_int(sum_action_values(actions, CONVERSION_ACTION_TYPES) + (purchase_count or 0)),
+                'conversion_value': normalize_float(sum_action_values(action_values, CONVERSION_ACTION_TYPES) + (purchase_value or 0.0)),
                 'raw_actions': json.dumps(actions, ensure_ascii=False),
                 'raw_action_values': json.dumps(action_values, ensure_ascii=False),
                 'raw_payload': json.dumps(item, ensure_ascii=False),
@@ -216,6 +256,7 @@ def persist_rows(rows: list[dict[str, Any]], cfg: dict[str, str], account_id: st
         raise RuntimeError('DATABASE_URL is missing in /10.work/03.KPdash/.env')
 
     report_dates = sorted({row['report_date'] for row in rows})
+    delete_account_ids = rows_account_ids(rows, account_id)
     with psycopg.connect(db_url) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -238,8 +279,8 @@ def persist_rows(rows: list[dict[str, Any]], cfg: dict[str, str], account_id: st
 
             if report_dates:
                 cur.execute(
-                    f'delete from {SCHEMA}.raw_campaign_insights_daily where account_id = %s and report_date = any(%s)',
-                    (account_id, report_dates),
+                    f'delete from {SCHEMA}.raw_campaign_insights_daily where account_id = any(%s) and report_date = any(%s)',
+                    (delete_account_ids, report_dates),
                 )
 
             if rows:
