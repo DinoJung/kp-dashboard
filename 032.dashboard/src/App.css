@@ -453,14 +453,40 @@
   max-width: min(100%, 860px);
 }
 
+.icebiscuit-dashboard__topbar {
+  align-items: flex-start;
+}
+
+.icebiscuit-dashboard__hero {
+  display: grid;
+  gap: 8px;
+}
+
+.icebiscuit-dashboard__period-chip {
+  width: fit-content;
+}
+
 .icebiscuit-dashboard__date-controls {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  align-items: flex-end;
 }
 
 .icebiscuit-dashboard__date-field {
   min-width: 160px;
+}
+
+.icebiscuit-dashboard__toolbar-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.icebiscuit-dashboard__preset-select-field {
+  min-width: 172px;
 }
 
 .icebiscuit-dashboard__preset-row {
@@ -829,6 +855,63 @@
   table-layout: fixed;
 }
 
+.icebiscuit-dashboard__summary-switch {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.icebiscuit-dashboard__summary-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.icebiscuit-dashboard__summary-delta {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.icebiscuit-dashboard__summary-delta--up {
+  color: #c00000;
+}
+
+.icebiscuit-dashboard__summary-delta--down {
+  color: #1565c0;
+}
+
+.icebiscuit-dashboard__summary-delta--flat {
+  color: #4b5563;
+}
+
+.icebiscuit-dashboard__sort-button {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.icebiscuit-dashboard__sort-button:hover {
+  color: #0047ab;
+}
+
+.icebiscuit-dashboard__metric-table-col--label {
+  width: 13.98%;
+}
+
+.icebiscuit-dashboard__metric-table-col--metric {
+  width: 10.7525%;
+}
+
 .icebiscuit-dashboard__equal-table--summary th,
 .icebiscuit-dashboard__equal-table--summary td {
   width: calc(100% / 8);
@@ -837,6 +920,11 @@
 .icebiscuit-dashboard__equal-table--campaign th,
 .icebiscuit-dashboard__equal-table--campaign td {
   width: calc(100% / 9);
+}
+
+.icebiscuit-dashboard__equal-table--campaign-metrics th,
+.icebiscuit-dashboard__equal-table--campaign-metrics td {
+  width: auto;
 }
 
 table {

@@ -86,6 +86,6 @@ export function presetLabel(preset: DateRangePreset) {
     case 'same-month-last-year':
       return '작년 이번달'
     case 'previous-month-last-year':
-      return '작년 저번달'
+      return '작년 지난달'
   }
 }
