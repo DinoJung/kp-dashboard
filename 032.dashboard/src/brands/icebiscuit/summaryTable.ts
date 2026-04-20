@@ -104,9 +104,11 @@ function buildDelta(current: number | null, previous: number | null, unit: 'perc
   return { direction: diff > 0 ? 'up' : 'down', value: roundDelta(Math.abs(diff)) }
 }
 
-function withDeltas(rows: Omit<SummaryRow, 'deltas'>[]): SummaryRow[] {
+type SummaryRowBase = Omit<SummaryRow, 'deltas'>
+
+function withDeltas(rows: SummaryRowBase[], resolvePrevious: (row: SummaryRowBase, index: number) => SummaryRowBase | null): SummaryRow[] {
   return rows.map((row, index) => {
-    const previous = rows[index + 1]
+    const previous = resolvePrevious(row, index)
     return {
       ...row,
       deltas: {
@@ -125,14 +127,16 @@ function withDeltas(rows: Omit<SummaryRow, 'deltas'>[]): SummaryRow[] {
 function buildMonthlySummaryRows(endDate: string, overviewRows: SummaryOverviewRow[]) {
   const endMonth = endDate.slice(0, 7)
   const end = new Date(`${endMonth}-01T00:00:00`)
-  const allowedMonths = new Set<string>()
+  const visibleMonths = new Set<string>()
   for (let i = 0; i < 6; i += 1) {
     const date = new Date(end.getFullYear(), end.getMonth() - i, 1)
-    allowedMonths.add(toIsoDate(date).slice(0, 7))
+    visibleMonths.add(toIsoDate(date).slice(0, 7))
   }
 
+  const overviewByMonth = new Map(overviewRows.map((row) => [row.report_month.slice(0, 7), row]))
+
   const rows = overviewRows
-    .filter((row) => allowedMonths.has(row.report_month.slice(0, 7)))
+    .filter((row) => visibleMonths.has(row.report_month.slice(0, 7)))
     .slice()
     .sort((a, b) => b.report_month.localeCompare(a.report_month))
     .map((row) => ({
@@ -147,7 +151,24 @@ function buildMonthlySummaryRows(endDate: string, overviewRows: SummaryOverviewR
       roas: row.roas,
     }))
 
-  return withDeltas(rows)
+  return withDeltas(rows, (row) => {
+    const [year, month] = row.label.split('-').map(Number)
+    const previousMonthKey = toIsoDate(new Date(year, month - 2, 1)).slice(0, 7)
+    const previous = overviewByMonth.get(previousMonthKey)
+    if (!previous) return null
+
+    return {
+      key: previous.report_month,
+      label: monthLabel(previous.report_month),
+      impressions: previous.impressions ?? 0,
+      clicks: previous.clicks ?? 0,
+      ctr: previous.ctr,
+      adSpend: previous.ad_spend ?? 0,
+      purchaseCount: previous.purchase_count ?? 0,
+      purchaseValue: previous.purchase_value ?? 0,
+      roas: previous.roas,
+    }
+  })
 }
 
 function formatWeeklyLabel(startIso: string, endIso: string) {
@@ -158,7 +179,7 @@ function buildWeeklySummaryRows(endDate: string, dailyRows: SummaryDailyRow[]) {
   const anchor = new Date(`${endDate}T00:00:00`)
   const currentWeekStart = startOfWeekMonday(anchor)
 
-  const rows = Array.from({ length: 6 }, (_, index) => {
+  const rows = Array.from({ length: 7 }, (_, index) => {
     const weekStart = addDays(currentWeekStart, index * -7)
     const rawWeekEnd = addDays(weekStart, 6)
     const weekEnd = index === 0 && toIsoDate(rawWeekEnd) > endDate ? anchor : rawWeekEnd
@@ -184,10 +205,11 @@ function buildWeeklySummaryRows(endDate: string, dailyRows: SummaryDailyRow[]) {
     }
   })
 
-  const hasAnyActivity = rows.some((row) => row.impressions || row.clicks || row.adSpend || row.purchaseCount || row.purchaseValue)
+  const visibleRows = rows.slice(0, 6)
+  const hasAnyActivity = visibleRows.some((row) => row.impressions || row.clicks || row.adSpend || row.purchaseCount || row.purchaseValue)
   if (!hasAnyActivity) return []
 
-  return withDeltas(rows)
+  return withDeltas(visibleRows, (_, index) => rows[index + 1] ?? null)
 }
 
 export function buildSummaryRows(args: { granularity: SummaryGranularity; endDate: string; overviewRows: SummaryOverviewRow[]; dailyRows: SummaryDailyRow[] }) {

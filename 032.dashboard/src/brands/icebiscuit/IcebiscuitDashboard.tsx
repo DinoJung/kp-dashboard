@@ -871,6 +871,14 @@ export default function IcebiscuitDashboard() {
                 onBlur={handleDateBlur}
               />
             </label>
+            <button
+              type="button"
+              className="icebiscuit-dashboard__preset-button icebiscuit-dashboard__apply-button"
+              onClick={handleApplyDateRange}
+              disabled={!hasPendingDateChange}
+            >
+              조회
+            </button>
           </div>
           <div className="icebiscuit-dashboard__toolbar-row">
             <div className="icebiscuit-dashboard__view-modes" role="tablist" aria-label="META 조회 단위">

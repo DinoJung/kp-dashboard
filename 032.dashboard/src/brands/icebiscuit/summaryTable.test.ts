@@ -26,6 +26,27 @@ describe('summaryTable helpers', () => {
     expect(rows[1].deltas.purchaseValue).toEqual({ direction: 'up', value: 26 })
   })
 
+  it('keeps previous-month delta for the oldest visible row when the prior month exists outside the 6-row table window', () => {
+    const rows = buildSummaryRows({
+      granularity: 'monthly',
+      endDate: '2026-06-30',
+      overviewRows: [
+        { report_month: '2025-12-01', impressions: 900, clicks: 90, ctr: 0.1, ad_spend: 9000, purchase_count: 9, purchase_value: 18000, roas: 2 },
+        { report_month: '2026-01-01', impressions: 1000, clicks: 100, ctr: 0.1, ad_spend: 10000, purchase_count: 10, purchase_value: 20000, roas: 2 },
+        { report_month: '2026-02-01', impressions: 1100, clicks: 110, ctr: 0.1, ad_spend: 11000, purchase_count: 11, purchase_value: 22000, roas: 2 },
+        { report_month: '2026-03-01', impressions: 1200, clicks: 120, ctr: 0.1, ad_spend: 12000, purchase_count: 12, purchase_value: 24000, roas: 2 },
+        { report_month: '2026-04-01', impressions: 1300, clicks: 130, ctr: 0.1, ad_spend: 13000, purchase_count: 13, purchase_value: 26000, roas: 2 },
+        { report_month: '2026-05-01', impressions: 1400, clicks: 140, ctr: 0.1, ad_spend: 14000, purchase_count: 14, purchase_value: 28000, roas: 2 },
+        { report_month: '2026-06-01', impressions: 1500, clicks: 150, ctr: 0.1, ad_spend: 15000, purchase_count: 15, purchase_value: 30000, roas: 2 },
+      ],
+      dailyRows: [],
+    })
+
+    expect(rows).toHaveLength(6)
+    expect(rows.at(-1)?.label).toBe('2026-01')
+    expect(rows.at(-1)?.deltas.impressions).toEqual({ direction: 'up', value: 11.1111 })
+  })
+
   it('builds weekly summary rows from monday-based periods and shortens same-year end labels', () => {
     const rows = buildSummaryRows({
       granularity: 'weekly',
@@ -81,6 +102,27 @@ describe('summaryTable helpers', () => {
     expect(weeklyRows[1].impressions).toBe(0)
     expect(weeklyRows[0].deltas.ctr).toBeNull()
     expect(formatSummaryDelta(weeklyRows[0].deltas.ctr, 'percentPoint')).toEqual({ text: '-', tone: 'flat' })
+  })
+
+  it('keeps previous-week delta for the oldest visible row when the prior week exists outside the 6-row table window', () => {
+    const weeklyRows = buildSummaryRows({
+      granularity: 'weekly',
+      endDate: '2026-04-16',
+      overviewRows: [],
+      dailyRows: [
+        { report_date: '2026-03-02', impressions: 80, clicks: 8, ad_spend: 200, purchase_count: 1, purchase_value: 400 },
+        { report_date: '2026-03-09', impressions: 100, clicks: 10, ad_spend: 250, purchase_count: 1, purchase_value: 500 },
+        { report_date: '2026-03-16', impressions: 120, clicks: 12, ad_spend: 300, purchase_count: 2, purchase_value: 600 },
+        { report_date: '2026-03-23', impressions: 140, clicks: 14, ad_spend: 350, purchase_count: 2, purchase_value: 700 },
+        { report_date: '2026-03-30', impressions: 160, clicks: 16, ad_spend: 400, purchase_count: 3, purchase_value: 800 },
+        { report_date: '2026-04-06', impressions: 180, clicks: 18, ad_spend: 450, purchase_count: 3, purchase_value: 900 },
+        { report_date: '2026-04-13', impressions: 200, clicks: 20, ad_spend: 500, purchase_count: 4, purchase_value: 1000 },
+      ],
+    })
+
+    expect(weeklyRows).toHaveLength(6)
+    expect(weeklyRows.at(-1)?.label).toBe('2026-03-09 - 03-15')
+    expect(weeklyRows.at(-1)?.deltas.impressions).toEqual({ direction: 'up', value: 25 })
   })
 
   it('returns empty weekly summary when the selected end date has no weekly activity in the 6-week window', () => {

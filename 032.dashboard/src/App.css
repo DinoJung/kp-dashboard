@@ -450,6 +450,10 @@
 }
 
 .icebiscuit-dashboard__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
   max-width: min(100%, 860px);
 }
 
@@ -471,6 +475,7 @@
   gap: 12px;
   flex-wrap: wrap;
   align-items: flex-end;
+  justify-content: flex-end;
 }
 
 .icebiscuit-dashboard__date-field {
@@ -522,6 +527,18 @@
   border-color: #bfdbfe;
   background: #eff6ff;
   color: #0047ab;
+}
+
+.icebiscuit-dashboard__apply-button:disabled {
+  border-color: #dbe2ea;
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.icebiscuit-dashboard__apply-button:disabled:hover {
+  border-color: #dbe2ea;
+  color: #94a3b8;
 }
 
 .icebiscuit-dashboard__view-modes {
