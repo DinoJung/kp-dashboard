@@ -965,8 +965,37 @@ tbody td {
   color: #374151;
 }
 
-tbody tr.is-selected {
+tbody tr.is-selected,
+tbody tr.is-selected td {
   background: #fff7ed;
+}
+
+.icebiscuit-dashboard__select-col {
+  width: 44px;
+}
+
+.icebiscuit-dashboard__select-cell {
+  width: 44px !important;
+  text-align: center;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.icebiscuit-dashboard__select-cell input {
+  width: 16px;
+  height: 16px;
+  accent-color: #0047ab;
+  cursor: pointer;
+}
+
+.icebiscuit-dashboard__equal-table--selectable th,
+.icebiscuit-dashboard__equal-table--selectable td {
+  width: auto;
+}
+
+.icebiscuit-dashboard__selected-total-row td {
+  background: #eff6ff;
+  color: #0f172a;
 }
 
 tfoot td {

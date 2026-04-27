@@ -316,6 +316,10 @@ function toMetricsFromCreativeRows(rows: AggregatedCreativeRow[]): AggregateMetr
   )
 }
 
+function emptyAggregateMetrics(): AggregateMetrics {
+  return { impressions: 0, clicks: 0, adSpend: 0, purchaseCount: 0, purchaseValue: 0 }
+}
+
 function toMetricsFromDailyRows(rows: IcebiscuitDailyRow[]): AggregateMetrics {
   return aggregateMetrics(
     rows.map((row) => ({
@@ -325,6 +329,32 @@ function toMetricsFromDailyRows(rows: IcebiscuitDailyRow[]): AggregateMetrics {
       purchase_count: row.purchase_count,
       purchase_value: row.purchase_value,
     })),
+  )
+}
+
+function toMetricsFromCreativeSortRows(rows: CreativeSortRow[]): AggregateMetrics {
+  return rows.reduce(
+    (acc, row) => ({
+      impressions: acc.impressions + row.impressions,
+      clicks: acc.clicks + row.clicks,
+      adSpend: acc.adSpend + row.ad_spend,
+      purchaseCount: acc.purchaseCount + row.purchase_count,
+      purchaseValue: acc.purchaseValue + row.purchase_value,
+    }),
+    emptyAggregateMetrics(),
+  )
+}
+
+function toMetricsFromDailyTotalRows(rows: Array<{ impressions: number; clicks: number; adSpend: number; purchaseCount: number; purchaseValue: number }>): AggregateMetrics {
+  return rows.reduce(
+    (acc, row) => ({
+      impressions: acc.impressions + row.impressions,
+      clicks: acc.clicks + row.clicks,
+      adSpend: acc.adSpend + row.adSpend,
+      purchaseCount: acc.purchaseCount + row.purchaseCount,
+      purchaseValue: acc.purchaseValue + row.purchaseValue,
+    }),
+    emptyAggregateMetrics(),
   )
 }
 
@@ -419,6 +449,8 @@ export default function IcebiscuitDashboard() {
   const [campaignSort, setCampaignSort] = useState<SummarySortState>(null)
   const [creativeSort, setCreativeSort] = useState<SummarySortState>(null)
   const [showCampaignCreatives, setShowCampaignCreatives] = useState(false)
+  const [selectedCreativeKeys, setSelectedCreativeKeys] = useState<Set<string>>(() => new Set())
+  const [selectedDailyDates, setSelectedDailyDates] = useState<Set<string>>(() => new Set())
   const didInitializeRange = useRef(false)
 
   useEffect(() => {
@@ -699,6 +731,24 @@ export default function IcebiscuitDashboard() {
   const creativeTotals = useMemo(() => toMetricsFromCreativeRows(creativeTableRows), [creativeTableRows])
   const dailyRowsByDate = useMemo(() => toDailyTotalsByDate(filteredDaily), [filteredDaily])
   const dailyTotals = useMemo(() => toMetricsFromDailyRows(filteredDaily), [filteredDaily])
+  const visibleCreativeKeys = useMemo(() => sortedCreativeRows.map((row) => row.ad_key), [sortedCreativeRows])
+  const visibleDailyDates = useMemo(() => dailyRowsByDate.map((row) => row.reportDate), [dailyRowsByDate])
+  const selectedCreativeRows = useMemo(
+    () => sortedCreativeRows.filter((row) => selectedCreativeKeys.has(row.ad_key)),
+    [selectedCreativeKeys, sortedCreativeRows],
+  )
+  const selectedDailyRows = useMemo(
+    () => dailyRowsByDate.filter((row) => selectedDailyDates.has(row.reportDate)),
+    [dailyRowsByDate, selectedDailyDates],
+  )
+  const selectedCreativeTotals = useMemo(() => toMetricsFromCreativeSortRows(selectedCreativeRows), [selectedCreativeRows])
+  const selectedDailyTotals = useMemo(() => toMetricsFromDailyTotalRows(selectedDailyRows), [selectedDailyRows])
+  const selectedCreativeCtr = selectedCreativeTotals.impressions > 0 ? selectedCreativeTotals.clicks / selectedCreativeTotals.impressions : null
+  const selectedCreativeRoas = selectedCreativeTotals.adSpend > 0 ? selectedCreativeTotals.purchaseValue / selectedCreativeTotals.adSpend : null
+  const selectedDailyCtr = selectedDailyTotals.impressions > 0 ? selectedDailyTotals.clicks / selectedDailyTotals.impressions : null
+  const selectedDailyRoas = selectedDailyTotals.adSpend > 0 ? selectedDailyTotals.purchaseValue / selectedDailyTotals.adSpend : null
+  const areAllVisibleCreativesSelected = visibleCreativeKeys.length > 0 && visibleCreativeKeys.every((key) => selectedCreativeKeys.has(key))
+  const areAllVisibleDailyRowsSelected = visibleDailyDates.length > 0 && visibleDailyDates.every((date) => selectedDailyDates.has(date))
   const overviewTotals = useMemo(() => aggregateMetrics(filteredOverview), [filteredOverview])
   const campaignCardMetrics = useMemo(
     () =>
@@ -733,6 +783,22 @@ export default function IcebiscuitDashboard() {
         ? `${monthKeyFromDate(normalizedRange.end)} 종료월 기준 최근 6개월`
         : '종료월 기준 최근 6개월'
   const periodLabel = normalizedRange.start && normalizedRange.end ? `${normalizedRange.start} ~ ${normalizedRange.end}` : '기간 선택 필요'
+
+  useEffect(() => {
+    setSelectedCreativeKeys((current) => {
+      const visible = new Set(visibleCreativeKeys)
+      const next = new Set(Array.from(current).filter((key) => visible.has(key)))
+      return next.size === current.size ? current : next
+    })
+  }, [visibleCreativeKeys])
+
+  useEffect(() => {
+    setSelectedDailyDates((current) => {
+      const visible = new Set(visibleDailyDates)
+      const next = new Set(Array.from(current).filter((date) => visible.has(date)))
+      return next.size === current.size ? current : next
+    })
+  }, [visibleDailyDates])
 
   if (loading) {
     return (
@@ -823,6 +889,48 @@ export default function IcebiscuitDashboard() {
 
   const handleCreativeSort = (key: SortableMetricKey) => {
     setCreativeSort((current) => cycleColumnSort(current, key))
+  }
+
+  const toggleCreativeSelection = (key: string) => {
+    setSelectedCreativeKeys((current) => {
+      const next = new Set(current)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const toggleDailySelection = (date: string) => {
+    setSelectedDailyDates((current) => {
+      const next = new Set(current)
+      if (next.has(date)) next.delete(date)
+      else next.add(date)
+      return next
+    })
+  }
+
+  const toggleAllVisibleCreatives = () => {
+    setSelectedCreativeKeys((current) => {
+      const next = new Set(current)
+      if (areAllVisibleCreativesSelected) {
+        visibleCreativeKeys.forEach((key) => next.delete(key))
+      } else {
+        visibleCreativeKeys.forEach((key) => next.add(key))
+      }
+      return next
+    })
+  }
+
+  const toggleAllVisibleDailyRows = () => {
+    setSelectedDailyDates((current) => {
+      const next = new Set(current)
+      if (areAllVisibleDailyRowsSelected) {
+        visibleDailyDates.forEach((date) => next.delete(date))
+      } else {
+        visibleDailyDates.forEach((date) => next.add(date))
+      }
+      return next
+    })
   }
 
   return (
@@ -1099,9 +1207,21 @@ export default function IcebiscuitDashboard() {
                 </tfoot>
               </table>
             ) : viewMode === 'daily' ? (
-              <table className="icebiscuit-dashboard__equal-table icebiscuit-dashboard__equal-table--campaign">
+              <table className="icebiscuit-dashboard__equal-table icebiscuit-dashboard__equal-table--campaign icebiscuit-dashboard__equal-table--selectable">
+                <colgroup>
+                  <col className="icebiscuit-dashboard__select-col" />
+                  <col span={8} />
+                </colgroup>
                 <thead>
                   <tr>
+                    <th className="icebiscuit-dashboard__select-cell">
+                      <input
+                        type="checkbox"
+                        aria-label="Daily 전체 선택"
+                        checked={areAllVisibleDailyRowsSelected}
+                        onChange={toggleAllVisibleDailyRows}
+                      />
+                    </th>
                     <th>일자</th>
                     <th>노출</th>
                     <th>클릭</th>
@@ -1114,26 +1234,51 @@ export default function IcebiscuitDashboard() {
                 </thead>
                 <tbody>
                   {dailyRowsByDate.length ? (
-                    dailyRowsByDate.map((row) => (
-                      <tr key={row.reportDate}>
-                        <td>{dayLabel(row.reportDate)}</td>
-                        <td>{formatTableNumber(row.impressions)}</td>
-                        <td>{formatTableNumber(row.clicks)}</td>
-                        <td>{formatTableRatio(row.impressions > 0 ? row.clicks / row.impressions : null, 2)}</td>
-                        <td>{formatTableCurrency(row.adSpend)}</td>
-                        <td>{formatTableNumber(row.purchaseCount)}</td>
-                        <td>{formatTableCurrency(row.purchaseValue)}</td>
-                        <td>{formatTableRatio(row.adSpend > 0 ? row.purchaseValue / row.adSpend : null, 0)}</td>
-                      </tr>
-                    ))
+                    dailyRowsByDate.map((row) => {
+                      const isSelected = selectedDailyDates.has(row.reportDate)
+                      return (
+                        <tr key={row.reportDate} className={isSelected ? 'is-selected' : ''}>
+                          <td className="icebiscuit-dashboard__select-cell">
+                            <input
+                              type="checkbox"
+                              aria-label={`${dayLabel(row.reportDate)} 선택`}
+                              checked={isSelected}
+                              onChange={() => toggleDailySelection(row.reportDate)}
+                            />
+                          </td>
+                          <td>{dayLabel(row.reportDate)}</td>
+                          <td>{formatTableNumber(row.impressions)}</td>
+                          <td>{formatTableNumber(row.clicks)}</td>
+                          <td>{formatTableRatio(row.impressions > 0 ? row.clicks / row.impressions : null, 2)}</td>
+                          <td>{formatTableCurrency(row.adSpend)}</td>
+                          <td>{formatTableNumber(row.purchaseCount)}</td>
+                          <td>{formatTableCurrency(row.purchaseValue)}</td>
+                          <td>{formatTableRatio(row.adSpend > 0 ? row.purchaseValue / row.adSpend : null, 0)}</td>
+                        </tr>
+                      )
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={8} className="icebiscuit-dashboard__empty-cell">선택한 기간의 daily 데이터가 아직 없어.</td>
+                      <td colSpan={9} className="icebiscuit-dashboard__empty-cell">선택한 기간의 daily 데이터가 아직 없어.</td>
                     </tr>
                   )}
                 </tbody>
                 <tfoot>
+                  {selectedDailyRows.length ? (
+                    <tr className="icebiscuit-dashboard__selected-total-row">
+                      <td></td>
+                      <td>선택 합계 ({selectedDailyRows.length})</td>
+                      <td>{formatTableNumber(selectedDailyTotals.impressions)}</td>
+                      <td>{formatTableNumber(selectedDailyTotals.clicks)}</td>
+                      <td>{formatTableRatio(selectedDailyCtr, 2)}</td>
+                      <td>{formatTableCurrency(selectedDailyTotals.adSpend)}</td>
+                      <td>{formatTableNumber(selectedDailyTotals.purchaseCount)}</td>
+                      <td>{formatTableCurrency(selectedDailyTotals.purchaseValue)}</td>
+                      <td>{formatTableRatio(selectedDailyRoas, 0)}</td>
+                    </tr>
+                  ) : null}
                   <tr>
+                    <td></td>
                     <td>Total</td>
                     <td>{formatTableNumber(dailyTotals.impressions)}</td>
                     <td>{formatTableNumber(dailyTotals.clicks)}</td>
@@ -1146,13 +1291,22 @@ export default function IcebiscuitDashboard() {
                 </tfoot>
               </table>
             ) : (
-              <table className="icebiscuit-dashboard__equal-table icebiscuit-dashboard__equal-table--campaign icebiscuit-dashboard__equal-table--campaign-metrics">
+              <table className="icebiscuit-dashboard__equal-table icebiscuit-dashboard__equal-table--campaign icebiscuit-dashboard__equal-table--campaign-metrics icebiscuit-dashboard__equal-table--selectable">
                 <colgroup>
+                  <col className="icebiscuit-dashboard__select-col" />
                   <col className="icebiscuit-dashboard__metric-table-col--label" />
                   <col span={8} className="icebiscuit-dashboard__metric-table-col--metric" />
                 </colgroup>
                 <thead>
                   <tr>
+                    <th className="icebiscuit-dashboard__select-cell">
+                      <input
+                        type="checkbox"
+                        aria-label="소재 전체 선택"
+                        checked={areAllVisibleCreativesSelected}
+                        onChange={toggleAllVisibleCreatives}
+                      />
+                    </th>
                     <th>소재</th>
                     <th><button type="button" className="icebiscuit-dashboard__sort-button" onClick={() => handleCreativeSort('impressions')}>노출 <span>{sortIndicator(creativeSort, 'impressions')}</span></button></th>
                     <th><button type="button" className="icebiscuit-dashboard__sort-button" onClick={() => handleCreativeSort('clicks')}>클릭 <span>{sortIndicator(creativeSort, 'clicks')}</span></button></th>
@@ -1166,25 +1320,64 @@ export default function IcebiscuitDashboard() {
                 </thead>
                 <tbody>
                   {sortedCreativeRows.length ? (
-                    sortedCreativeRows.map((row) => (
-                      <tr key={row.ad_key}>
-                        <td>{row.ad_name}</td>
-                        <td>{formatTableNumber(row.impressions)}</td>
-                        <td>{formatTableNumber(row.clicks)}</td>
-                        <td>{formatTableRatio(row.ctr, 2)}</td>
-                        <td>{formatTableCurrency(row.ad_spend)}</td>
-                        <td>{formatTableNumber(row.purchase_count)}</td>
-                        <td>{formatTableCurrency(row.purchase_value)}</td>
-                        <td>{formatTableRatio(row.purchase_rate, 2)}</td>
-                        <td>{formatTableRatio(row.roas, 0)}</td>
-                      </tr>
-                    ))
+                    sortedCreativeRows.map((row) => {
+                      const isSelected = selectedCreativeKeys.has(row.ad_key)
+                      return (
+                        <tr key={row.ad_key} className={isSelected ? 'is-selected' : ''}>
+                          <td className="icebiscuit-dashboard__select-cell">
+                            <input
+                              type="checkbox"
+                              aria-label={`${row.ad_name} 선택`}
+                              checked={isSelected}
+                              onChange={() => toggleCreativeSelection(row.ad_key)}
+                            />
+                          </td>
+                          <td>{row.ad_name}</td>
+                          <td>{formatTableNumber(row.impressions)}</td>
+                          <td>{formatTableNumber(row.clicks)}</td>
+                          <td>{formatTableRatio(row.ctr, 2)}</td>
+                          <td>{formatTableCurrency(row.ad_spend)}</td>
+                          <td>{formatTableNumber(row.purchase_count)}</td>
+                          <td>{formatTableCurrency(row.purchase_value)}</td>
+                          <td>{formatTableRatio(row.purchase_rate, 2)}</td>
+                          <td>{formatTableRatio(row.roas, 0)}</td>
+                        </tr>
+                      )
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={9} className="icebiscuit-dashboard__empty-cell">선택한 기간의 소재 데이터가 아직 없어.</td>
+                      <td colSpan={10} className="icebiscuit-dashboard__empty-cell">선택한 기간의 소재 데이터가 아직 없어.</td>
                     </tr>
                   )}
                 </tbody>
+                <tfoot>
+                  {selectedCreativeRows.length ? (
+                    <tr className="icebiscuit-dashboard__selected-total-row">
+                      <td></td>
+                      <td>선택 합계 ({selectedCreativeRows.length})</td>
+                      <td>{formatTableNumber(selectedCreativeTotals.impressions)}</td>
+                      <td>{formatTableNumber(selectedCreativeTotals.clicks)}</td>
+                      <td>{formatTableRatio(selectedCreativeCtr, 2)}</td>
+                      <td>{formatTableCurrency(selectedCreativeTotals.adSpend)}</td>
+                      <td>{formatTableNumber(selectedCreativeTotals.purchaseCount)}</td>
+                      <td>{formatTableCurrency(selectedCreativeTotals.purchaseValue)}</td>
+                      <td>{formatTableRatio(selectedCreativeTotals.clicks > 0 ? selectedCreativeTotals.purchaseCount / selectedCreativeTotals.clicks : null, 2)}</td>
+                      <td>{formatTableRatio(selectedCreativeRoas, 0)}</td>
+                    </tr>
+                  ) : null}
+                  <tr>
+                    <td></td>
+                    <td>Total</td>
+                    <td>{formatTableNumber(creativeTotals.impressions)}</td>
+                    <td>{formatTableNumber(creativeTotals.clicks)}</td>
+                    <td>{formatTableRatio(creativeTotals.impressions > 0 ? creativeTotals.clicks / creativeTotals.impressions : null, 2)}</td>
+                    <td>{formatTableCurrency(creativeTotals.adSpend)}</td>
+                    <td>{formatTableNumber(creativeTotals.purchaseCount)}</td>
+                    <td>{formatTableCurrency(creativeTotals.purchaseValue)}</td>
+                    <td>{formatTableRatio(creativeTotals.clicks > 0 ? creativeTotals.purchaseCount / creativeTotals.clicks : null, 2)}</td>
+                    <td>{formatTableRatio(creativeTotals.adSpend > 0 ? creativeTotals.purchaseValue / creativeTotals.adSpend : null, 0)}</td>
+                  </tr>
+                </tfoot>
               </table>
             )}
           </div>
