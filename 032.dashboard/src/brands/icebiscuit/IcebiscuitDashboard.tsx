@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, Coins, Megaphone, MousePointerClick, ShoppingBag, Target, TrendingUp, Users } from 'lucide-react'
+import { CalendarDays, Coins, Download, Megaphone, MousePointerClick, ShoppingBag, Target, TrendingUp, Users } from 'lucide-react'
 import { getDashboardLoadErrorMessage, supabase } from '../../lib/supabase'
 import { buildPresetRange, clampDateRange, presetLabel, type DateRangePreset } from './datePresets'
 import { MIN_SELECTABLE_DATE, clampToSelectableDate, shouldApplyDateRangeOnBlur, shouldApplyDateRangeOnKey } from './filterControls'
@@ -172,6 +172,29 @@ type AggregatedCreativeRow = MetaAggregatedCreativeRow
 
 type SummaryRow = DisplaySummaryRow
 
+type ExcelCellValue = string | number | null | undefined
+
+type ExcelCell = {
+  value: ExcelCellValue
+  format?: string
+}
+
+type ExcelSheet = {
+  name: string
+  headers: string[]
+  rows: ExcelCell[][]
+}
+
+const EXCEL_FORMATS = {
+  count: '0"건"',
+  integer: '#,##0',
+  percent2: '0.00%',
+  percent0: '0%',
+  text: '@',
+} as const
+
+const campaignExportTypes = ['ASC', '리타겟팅', '전환(패션관심)', '참여 캠페인 / 게시물참여'] as const
+
 const numberFormatter = new Intl.NumberFormat('ko-KR')
 const currencyFormatter = new Intl.NumberFormat('ko-KR', {
   style: 'currency',
@@ -255,6 +278,89 @@ function formatTableCurrency(value: number | null | undefined) {
 function formatTableRatio(value: number | null | undefined, digits: 0 | 2 = 2) {
   if (value === null || value === undefined || value === 0) return '-'
   return formatRatioFixed(value, digits)
+}
+
+function excelCell(value: ExcelCellValue, format?: string): ExcelCell {
+  return { value: value ?? '', format }
+}
+
+function escapeExcelHtml(value: ExcelCellValue) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
+function escapeExcelAttribute(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
+function sanitizeSheetName(value: string) {
+  return value.replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31) || 'Sheet1'
+}
+
+function serializeExcelWorkbook(sheets: ExcelSheet[]) {
+  const worksheetHtml = sheets
+    .map((sheet) => {
+      const headers = sheet.headers.map((header) => `<th>${escapeExcelHtml(header)}</th>`).join('')
+      const rows = sheet.rows
+        .map(
+          (row) =>
+            `<tr>${row
+              .map((cell) => {
+                const style = cell.format ? ` style="mso-number-format:'${escapeExcelAttribute(cell.format)}'"` : ''
+                return `<td${style}>${escapeExcelHtml(cell.value)}</td>`
+              })
+              .join('')}</tr>`,
+        )
+        .join('')
+
+      return `<h3>${escapeExcelHtml(sheet.name)}</h3><table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table><br/>`
+    })
+    .join('')
+
+  return `<!doctype html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>${sheets
+    .map((sheet) => `<x:ExcelWorksheet><x:Name>${escapeExcelHtml(sanitizeSheetName(sheet.name))}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>`)
+    .join('')}</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>${worksheetHtml}</body></html>`
+}
+
+function downloadExcelWorkbook(filename: string, sheets: ExcelSheet[]) {
+  const blob = new Blob([serializeExcelWorkbook(sheets)], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename.endsWith('.xls') ? filename : `${filename}.xls`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function normalizeExportCampaignGroup(value: string | null | undefined) {
+  const label = formatCampaignName(value)
+  if (label.includes('참여')) return '참여 캠페인 / 게시물참여'
+  return label
+}
+
+function campaignGoalForExport(campaignGroup: string, adName?: string) {
+  if (adName === '전월소재') return '전환'
+  if (campaignGroup === 'ASC') return '전환_논타겟팅'
+  if (campaignGroup === '리타겟팅') return '전환_리타겟팅'
+  if (campaignGroup === '전환(패션관심)') return '전환_1849MF+관심사'
+  if (campaignGroup.includes('참여')) return campaignGroup.includes('게시물') ? '게시물 참여' : '트래픽'
+  return campaignGroup || '-'
+}
+
+function creativeNameForCampaignExport(campaignGroup: string, adName: string) {
+  if (adName === '전월소재') return '전월소재'
+  if (campaignGroup === '리타겟팅') return `RT_${adName}`
+  if (campaignGroup.includes('참여')) return `TR_${adName}`
+  return `CV_${adName}`
 }
 
 function renderSummaryMetric(valueText: string, deltaText: string, tone: 'up' | 'down' | 'flat') {
@@ -933,6 +1039,99 @@ export default function IcebiscuitDashboard() {
     })
   }
 
+  const buildCampaignExpandedExportSheet = (): ExcelSheet => {
+    const rows = campaignExportTypes.map((campaignGroup) => {
+      const metrics = sortedCampaignRows.find((row) => normalizeExportCampaignGroup(row.campaign_name) === campaignGroup)
+      const childRows = sortedCampaignCreativeRows.filter((row) => normalizeExportCampaignGroup(row.campaign_group) === campaignGroup)
+      const adCount = childRows.filter((row) => row.ad_name !== '전월소재').length
+      const impressions = metrics?.impressions ?? 0
+      const clicks = metrics?.clicks ?? 0
+      const adSpend = metrics?.ad_spend ?? 0
+      const purchaseCount = metrics?.purchase_count ?? 0
+      const purchaseValue = metrics?.purchase_value ?? 0
+
+      return [
+        excelCell(adCount, EXCEL_FORMATS.count),
+        excelCell(campaignGroup.replace(' / ', '/'), EXCEL_FORMATS.text),
+        excelCell(impressions, EXCEL_FORMATS.integer),
+        excelCell(clicks, EXCEL_FORMATS.integer),
+        excelCell(impressions > 0 ? clicks / impressions : 0, EXCEL_FORMATS.percent2),
+        excelCell(adSpend, EXCEL_FORMATS.integer),
+        excelCell(purchaseCount, EXCEL_FORMATS.integer),
+        excelCell(purchaseValue, EXCEL_FORMATS.integer),
+        excelCell(clicks > 0 ? purchaseCount / clicks : 0, EXCEL_FORMATS.percent2),
+        excelCell(adSpend > 0 ? purchaseValue / adSpend : 0, EXCEL_FORMATS.percent0),
+      ]
+    })
+
+    return {
+      name: '캠페인_펼침',
+      headers: ['광고 건 수', '광고 유형', '노출', '클릭', 'CTR', '광고비(마크업,vat-)', '구매', '기여매출', '구매율', 'ROAS'],
+      rows,
+    }
+  }
+
+  const buildCampaignCollapsedExportSheet = (): ExcelSheet => ({
+    name: '캠페인_접힘',
+    headers: ['소재', '캠페인 목표', '노출', '클릭', '구매', '매출', '광고비(마크업,vat-)'],
+    rows: sortedCampaignCreativeRows.map((row) => {
+      const campaignGroup = normalizeExportCampaignGroup(row.campaign_group)
+      return [
+        excelCell(creativeNameForCampaignExport(campaignGroup, row.ad_name), EXCEL_FORMATS.text),
+        excelCell(campaignGoalForExport(campaignGroup, row.ad_name), EXCEL_FORMATS.text),
+        excelCell(row.impressions, EXCEL_FORMATS.integer),
+        excelCell(row.clicks, EXCEL_FORMATS.integer),
+        excelCell(row.purchase_count, EXCEL_FORMATS.integer),
+        excelCell(row.purchase_value, EXCEL_FORMATS.integer),
+        excelCell(row.ad_spend, EXCEL_FORMATS.integer),
+      ]
+    }),
+  })
+
+  const buildCreativeExportSheet = (): ExcelSheet => ({
+    name: '소재단위',
+    headers: ['소재', '노출', '클릭', 'CTR', '광고비(마크업,vat-)', '구매', '기여매출', '구매율', 'ROAS'],
+    rows: sortedCreativeRows.map((row) => [
+      excelCell(row.ad_name, EXCEL_FORMATS.text),
+      excelCell(row.impressions, EXCEL_FORMATS.integer),
+      excelCell(row.clicks, EXCEL_FORMATS.integer),
+      excelCell(row.ctr ?? 0, EXCEL_FORMATS.percent2),
+      excelCell(row.ad_spend, EXCEL_FORMATS.integer),
+      excelCell(row.purchase_count, EXCEL_FORMATS.integer),
+      excelCell(row.purchase_value, EXCEL_FORMATS.integer),
+      excelCell(row.purchase_rate ?? 0, EXCEL_FORMATS.percent2),
+      excelCell(row.roas ?? 0, EXCEL_FORMATS.percent0),
+    ]),
+  })
+
+  const buildDailyExportSheet = (): ExcelSheet => ({
+    name: 'Daily단위',
+    headers: ['일자', '노출', '클릭', 'CTR', '광고비(마크업,vat-)', '구매', '기여매출', 'ROAS'],
+    rows: dailyRowsByDate.map((row) => [
+      excelCell(dayLabel(row.reportDate), EXCEL_FORMATS.text),
+      excelCell(row.impressions, EXCEL_FORMATS.integer),
+      excelCell(row.clicks, EXCEL_FORMATS.integer),
+      excelCell(row.impressions > 0 ? row.clicks / row.impressions : 0, EXCEL_FORMATS.percent2),
+      excelCell(row.adSpend, EXCEL_FORMATS.integer),
+      excelCell(row.purchaseCount, EXCEL_FORMATS.integer),
+      excelCell(row.purchaseValue, EXCEL_FORMATS.integer),
+      excelCell(row.adSpend > 0 ? row.purchaseValue / row.adSpend : 0, EXCEL_FORMATS.percent0),
+    ]),
+  })
+
+  const handleDownloadExcel = () => {
+    const modeLabel = viewMode === 'campaign' ? (showCampaignCreatives ? 'campaign-expanded' : 'campaign-collapsed') : viewMode
+    const sheet = viewMode === 'campaign'
+      ? showCampaignCreatives
+        ? buildCampaignExpandedExportSheet()
+        : buildCampaignCollapsedExportSheet()
+      : viewMode === 'daily'
+        ? buildDailyExportSheet()
+        : buildCreativeExportSheet()
+
+    downloadExcelWorkbook(`icebiscuit_meta_${modeLabel}_${normalizedRange.start}_${normalizedRange.end}.xls`, [sheet])
+  }
+
   return (
     <div className="dashboard-shell icebiscuit-dashboard">
       <header className="topbar topbar--brand icebiscuit-dashboard__topbar">
@@ -1112,15 +1311,26 @@ export default function IcebiscuitDashboard() {
                     : 'META 소재 성과'}
               </h2>
             </div>
-            {viewMode === 'campaign' ? (
+            <div className="icebiscuit-dashboard__panel-actions">
               <button
                 type="button"
-                className={`icebiscuit-dashboard__preset-button${showCampaignCreatives ? ' is-active' : ''}`}
-                onClick={() => setShowCampaignCreatives((current) => !current)}
+                className="icebiscuit-dashboard__download-button"
+                onClick={handleDownloadExcel}
+                aria-label="엑셀 다운로드"
+                title="엑셀 다운로드"
               >
-                {showCampaignCreatives ? '소재 전체 접기' : '소재 전체 보기'}
+                <Download size={18} aria-hidden="true" />
               </button>
-            ) : null}
+              {viewMode === 'campaign' ? (
+                <button
+                  type="button"
+                  className={`icebiscuit-dashboard__preset-button${showCampaignCreatives ? ' is-active' : ''}`}
+                  onClick={() => setShowCampaignCreatives((current) => !current)}
+                >
+                  {showCampaignCreatives ? '소재 전체 접기' : '소재 전체 보기'}
+                </button>
+              ) : null}
+            </div>
           </div>
           <div className="table-wrap">
             {viewMode === 'campaign' ? (

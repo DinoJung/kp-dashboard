@@ -529,6 +529,40 @@
   color: #0047ab;
 }
 
+.icebiscuit-dashboard__panel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.icebiscuit-dashboard__download-button {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid #dbe2ea;
+  background: #ffffff;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.icebiscuit-dashboard__download-button:hover {
+  border-color: #93c5fd;
+  color: #0047ab;
+  background: #eff6ff;
+}
+
+.icebiscuit-dashboard__download-button:focus-visible {
+  outline: 3px solid rgba(59, 130, 246, 0.28);
+  outline-offset: 2px;
+}
+
 .icebiscuit-dashboard__apply-button:disabled {
   border-color: #dbe2ea;
   background: #f8fafc;
