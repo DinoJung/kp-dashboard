@@ -1120,11 +1120,11 @@ export default function IcebiscuitDashboard() {
   })
 
   const handleDownloadExcel = () => {
-    const modeLabel = viewMode === 'campaign' ? (showCampaignCreatives ? 'campaign-expanded' : 'campaign-collapsed') : viewMode
+    const modeLabel = viewMode === 'campaign' ? (showCampaignCreatives ? 'campaign-collapsed' : 'campaign-expanded') : viewMode
     const sheet = viewMode === 'campaign'
       ? showCampaignCreatives
-        ? buildCampaignExpandedExportSheet()
-        : buildCampaignCollapsedExportSheet()
+        ? buildCampaignCollapsedExportSheet()
+        : buildCampaignExpandedExportSheet()
       : viewMode === 'daily'
         ? buildDailyExportSheet()
         : buildCreativeExportSheet()
