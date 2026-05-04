@@ -55,6 +55,8 @@ export type AggregatedCreativeRow = {
   campaign_group: string
   ad_key: string
   ad_name: string
+  start_date?: string | null
+  end_date?: string | null
   impressions: number
   clicks: number
   ad_spend: number
@@ -161,12 +163,16 @@ export function aggregateCampaignCreativeRowsForRange(rows: DailyCreativeRow[], 
       campaign_group: campaignGroup,
       ad_key: key,
       ad_name: adName,
+      start_date: null,
+      end_date: null,
       impressions: 0,
       clicks: 0,
       ad_spend: 0,
       purchase_count: 0,
       purchase_value: 0,
     }
+    current.start_date = current.start_date && current.start_date < row.report_date ? current.start_date : row.report_date
+    current.end_date = current.end_date && current.end_date > row.report_date ? current.end_date : row.report_date
     current.impressions += row.impressions ?? 0
     current.clicks += row.clicks ?? 0
     current.ad_spend += row.ad_spend ?? 0
@@ -193,12 +199,16 @@ export function aggregateCreativeRowsForRange(rows: DailyCreativeRow[], range: D
       campaign_group: '',
       ad_key: key,
       ad_name: adName,
+      start_date: null,
+      end_date: null,
       impressions: 0,
       clicks: 0,
       ad_spend: 0,
       purchase_count: 0,
       purchase_value: 0,
     }
+    current.start_date = current.start_date && current.start_date < row.report_date ? current.start_date : row.report_date
+    current.end_date = current.end_date && current.end_date > row.report_date ? current.end_date : row.report_date
     current.impressions += row.impressions ?? 0
     current.clicks += row.clicks ?? 0
     current.ad_spend += row.ad_spend ?? 0

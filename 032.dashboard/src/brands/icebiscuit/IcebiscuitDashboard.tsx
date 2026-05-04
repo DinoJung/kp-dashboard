@@ -150,6 +150,8 @@ type CreativeSortRow = {
   campaign_group: string
   ad_key: string
   ad_name: string
+  start_date: string | null
+  end_date: string | null
   impressions: number
   clicks: number
   ctr: number | null
@@ -218,6 +220,26 @@ const presets: DateRangePreset[] = ['this-week', 'last-week', 'this-month', 'las
 
 function dayLabel(value: string) {
   return value.slice(0, 10)
+}
+
+function monthLabel(value: string | null | undefined) {
+  if (!value) return ''
+  const month = Number(value.slice(5, 7))
+  return Number.isFinite(month) && month > 0 ? `${month}월` : ''
+}
+
+function formatExecutionPeriodLabel(startDate: string | null | undefined, endDate: string | null | undefined) {
+  if (!startDate || !endDate) return ''
+  const format = (value: string) => {
+    const month = Number(value.slice(5, 7))
+    const day = Number(value.slice(8, 10))
+    if (!Number.isFinite(month) || !Number.isFinite(day)) return ''
+    return `${month}/${day}`
+  }
+  const start = format(startDate)
+  const end = format(endDate)
+  if (!start || !end) return ''
+  return `${start} ~${end}`
 }
 
 function formatNumber(value: number | null | undefined) {
@@ -301,7 +323,7 @@ function escapeExcelAttribute(value: string) {
 }
 
 function sanitizeSheetName(value: string) {
-  return value.replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31) || 'Sheet1'
+  return value.replace(/[\\/?*[\]:]/g, ' ').slice(0, 31) || 'Sheet1'
 }
 
 function serializeExcelWorkbook(sheets: ExcelSheet[]) {
@@ -363,6 +385,76 @@ function creativeNameForCampaignExport(campaignGroup: string, adName: string) {
   return `CV_${adName}`
 }
 
+function campaignCreativeExportSortRank(row: CreativeSortRow) {
+  const exportName = creativeNameForCampaignExport(normalizeExportCampaignGroup(row.campaign_group), row.ad_name)
+  if (exportName.startsWith('CV_')) return 0
+  if (exportName.startsWith('RT_')) return 1
+  if (exportName.startsWith('TR_')) return 2
+  return 3
+}
+
+function orderCampaignCreativeRowsForExport(campaignRows: CampaignSortRow[], rowsByCampaign: Map<string, CreativeSortRow[]>, fallbackRows: CreativeSortRow[]) {
+  const orderedRows: CreativeSortRow[] = []
+  const seenKeys = new Set<string>()
+
+  campaignRows.forEach((campaignRow) => {
+    const childRows = rowsByCampaign.get(campaignRow.campaign_name) ?? []
+    childRows.forEach((childRow) => {
+      if (seenKeys.has(childRow.ad_key)) return
+      orderedRows.push(childRow)
+      seenKeys.add(childRow.ad_key)
+    })
+  })
+
+  fallbackRows.forEach((row) => {
+    if (seenKeys.has(row.ad_key)) return
+    orderedRows.push(row)
+    seenKeys.add(row.ad_key)
+  })
+
+  const previousRows = orderedRows.filter((row) => row.ad_name === '전월소재')
+  const combinedPreviousRow = previousRows.length
+    ? previousRows.reduce<CreativeSortRow>(
+        (acc, row) => {
+          acc.start_date = acc.start_date && row.start_date && acc.start_date < row.start_date ? acc.start_date : row.start_date
+          acc.end_date = acc.end_date && row.end_date && acc.end_date > row.end_date ? acc.end_date : row.end_date
+          acc.impressions += row.impressions
+          acc.clicks += row.clicks
+          acc.ad_spend += row.ad_spend
+          acc.purchase_count += row.purchase_count
+          acc.purchase_value += row.purchase_value
+          acc.ctr = acc.impressions > 0 ? acc.clicks / acc.impressions : null
+          acc.purchase_rate = acc.clicks > 0 ? acc.purchase_count / acc.clicks : null
+          acc.roas = acc.ad_spend > 0 ? acc.purchase_value / acc.ad_spend : null
+          return acc
+        },
+        {
+          label: '전월소재',
+          campaign_group: '',
+          ad_key: '전월소재',
+          ad_name: '전월소재',
+          start_date: null,
+          end_date: null,
+          impressions: 0,
+          clicks: 0,
+          ctr: null,
+          ad_spend: 0,
+          purchase_count: 0,
+          purchase_value: 0,
+          purchase_rate: null,
+          roas: null,
+        },
+      )
+    : null
+
+  return [
+    ...orderedRows
+      .filter((row) => row.ad_name !== '전월소재')
+      .sort((a, b) => campaignCreativeExportSortRank(a) - campaignCreativeExportSortRank(b)),
+    ...(combinedPreviousRow ? [combinedPreviousRow] : []),
+  ]
+}
+
 function renderSummaryMetric(valueText: string, deltaText: string, tone: 'up' | 'down' | 'flat') {
   return (
     <span className="icebiscuit-dashboard__summary-value">
@@ -398,6 +490,8 @@ function toCreativeSortRow(row: AggregatedCreativeRow): CreativeSortRow {
     campaign_group: row.campaign_group,
     ad_key: row.ad_key,
     ad_name: row.ad_name,
+    start_date: row.start_date ?? null,
+    end_date: row.end_date ?? null,
     impressions: row.impressions,
     clicks: row.clicks,
     ctr: row.impressions > 0 ? row.clicks / row.impressions : null,
@@ -745,6 +839,8 @@ export default function IcebiscuitDashboard() {
         campaign_group: campaignGroup,
         ad_key: key,
         ad_name: adName,
+        start_date: null,
+        end_date: null,
         impressions: 0,
         clicks: 0,
         ad_spend: 0,
@@ -780,6 +876,8 @@ export default function IcebiscuitDashboard() {
         campaign_group: '',
         ad_key: key,
         ad_name: adName,
+        start_date: null,
+        end_date: null,
         impressions: 0,
         clicks: 0,
         ad_spend: 0,
@@ -1065,20 +1163,24 @@ export default function IcebiscuitDashboard() {
     })
 
     return {
-      name: '캠페인_펼침',
+      name: '소재_닫힘',
       headers: ['광고 건 수', '광고 유형', '노출', '클릭', 'CTR', '광고비(마크업,vat-)', '구매', '기여매출', '구매율', 'ROAS'],
       rows,
     }
   }
 
   const buildCampaignCollapsedExportSheet = (): ExcelSheet => ({
-    name: '캠페인_접힘',
-    headers: ['소재', '캠페인 목표', '노출', '클릭', '구매', '매출', '광고비(마크업,vat-)'],
-    rows: sortedCampaignCreativeRows.map((row) => {
+    name: '소재_펼침',
+    headers: ['소재', '타겟', '집행월', '기간', '캠페인목표', '노출', '클릭', '구매', '매출', '광고비(마크업,vat-)'],
+    rows: orderCampaignCreativeRowsForExport(sortedCampaignRows, creativeRowsByCampaign, sortedCampaignCreativeRows).map((row) => {
       const campaignGroup = normalizeExportCampaignGroup(row.campaign_group)
+      const campaignGoal = campaignGoalForExport(campaignGroup, row.ad_name)
       return [
         excelCell(creativeNameForCampaignExport(campaignGroup, row.ad_name), EXCEL_FORMATS.text),
-        excelCell(campaignGoalForExport(campaignGroup, row.ad_name), EXCEL_FORMATS.text),
+        excelCell(campaignGoal === '전환_1849MF+관심사' ? '맨&우먼' : '주니어', EXCEL_FORMATS.text),
+        excelCell(monthLabel(row.start_date ?? normalizedRange.start), EXCEL_FORMATS.text),
+        excelCell(formatExecutionPeriodLabel(row.start_date, row.end_date), EXCEL_FORMATS.text),
+        excelCell(campaignGoal, EXCEL_FORMATS.text),
         excelCell(row.impressions, EXCEL_FORMATS.integer),
         excelCell(row.clicks, EXCEL_FORMATS.integer),
         excelCell(row.purchase_count, EXCEL_FORMATS.integer),
@@ -1120,7 +1222,7 @@ export default function IcebiscuitDashboard() {
   })
 
   const handleDownloadExcel = () => {
-    const modeLabel = viewMode === 'campaign' ? (showCampaignCreatives ? 'campaign-collapsed' : 'campaign-expanded') : viewMode
+    const modeLabel = viewMode === 'campaign' ? (showCampaignCreatives ? 'creative-open' : 'creative-closed') : viewMode
     const sheet = viewMode === 'campaign'
       ? showCampaignCreatives
         ? buildCampaignCollapsedExportSheet()

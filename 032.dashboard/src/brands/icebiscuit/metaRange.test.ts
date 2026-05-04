@@ -135,6 +135,8 @@ describe('metaRange', () => {
         campaign_group: '',
         ad_key: 'ASC 아이스딜1차',
         ad_name: 'ASC 아이스딜1차',
+        start_date: '2026-04-02',
+        end_date: '2026-04-12',
         impressions: 150,
         clicks: 15,
         ad_spend: 1400,
