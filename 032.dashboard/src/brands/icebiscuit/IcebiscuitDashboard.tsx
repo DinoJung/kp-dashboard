@@ -386,11 +386,14 @@ function creativeNameForCampaignExport(campaignGroup: string, adName: string) {
 }
 
 function campaignCreativeExportSortRank(row: CreativeSortRow) {
-  const exportName = creativeNameForCampaignExport(normalizeExportCampaignGroup(row.campaign_group), row.ad_name)
-  if (exportName.startsWith('CV_')) return 0
+  const campaignGroup = normalizeExportCampaignGroup(row.campaign_group)
+  const exportName = creativeNameForCampaignExport(campaignGroup, row.ad_name)
+  const campaignGoal = campaignGoalForExport(campaignGroup, row.ad_name)
+  if (exportName.startsWith('CV_') && campaignGoal !== '전환_1849MF+관심사') return 0
   if (exportName.startsWith('RT_')) return 1
-  if (exportName.startsWith('TR_')) return 2
-  return 3
+  if (exportName.startsWith('CV_') && campaignGoal === '전환_1849MF+관심사') return 2
+  if (exportName.startsWith('TR_')) return 3
+  return 4
 }
 
 function orderCampaignCreativeRowsForExport(campaignRows: CampaignSortRow[], rowsByCampaign: Map<string, CreativeSortRow[]>, fallbackRows: CreativeSortRow[]) {
