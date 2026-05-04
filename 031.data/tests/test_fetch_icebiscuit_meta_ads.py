@@ -53,7 +53,15 @@ class BuildRowsTest(unittest.TestCase):
             ]
         }
 
-        rows = mod.build_rows(payload)
+        rows = mod.build_rows(
+            payload,
+            level='campaign',
+            account_id='act_123',
+            access_token='test-token',
+            api_version='v23.0',
+            since=mod.parse_iso_date('2026-04-16'),
+            until=mod.parse_iso_date('2026-04-16'),
+        )
 
         self.assertEqual(rows[0]['purchase_count'], 10)
         self.assertEqual(rows[0]['purchase_value'], 100000.0)
@@ -88,7 +96,15 @@ class BuildRowsTest(unittest.TestCase):
             ]
         }
 
-        rows = mod.build_rows(payload)
+        rows = mod.build_rows(
+            payload,
+            level='campaign',
+            account_id='act_123',
+            access_token='test-token',
+            api_version='v23.0',
+            since=mod.parse_iso_date('2026-04-16'),
+            until=mod.parse_iso_date('2026-04-16'),
+        )
 
         self.assertEqual(rows[0]['purchase_count'], 7)
         self.assertEqual(rows[0]['purchase_value'], 77777.0)
