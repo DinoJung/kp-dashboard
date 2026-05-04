@@ -936,6 +936,30 @@
   color: #4b5563;
 }
 
+.kp-dashboard__trend-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.kp-dashboard__trend-delta {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.kp-dashboard__trend-delta--up {
+  color: #c00000;
+}
+
+.kp-dashboard__trend-delta--down {
+  color: #1565c0;
+}
+
+.kp-dashboard__trend-delta--flat {
+  color: #64748b;
+}
+
 .icebiscuit-dashboard__sort-button {
   display: inline-flex;
   width: 100%;

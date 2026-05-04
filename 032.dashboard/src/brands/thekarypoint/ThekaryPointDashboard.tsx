@@ -135,6 +135,11 @@ type MetricCardProps = {
   valueSize?: 'default' | 'compact'
 }
 
+type TrendDelta = {
+  text: string
+  tone: 'up' | 'down' | 'flat'
+}
+
 type ReportExportMode = 'pdf' | 'ppt' | 'ppt2'
 
 const MEMBER_TARGET_2026 = 280_000
@@ -361,6 +366,18 @@ function summarizePercentChange(current: number | null | undefined, previous: nu
   return `전월 대비 ${sign}${ratioPercentFormatter.format(changeRate)}`
 }
 
+function buildTrendDelta(current: number | null | undefined, previous: number | null | undefined): TrendDelta {
+  if (current === null || current === undefined || previous === null || previous === undefined || previous === 0) {
+    return { text: '-', tone: 'flat' }
+  }
+  const changeRate = ((current - previous) / previous) * 100
+  if (Math.abs(changeRate) < 0.000_000_1) return { text: '-', tone: 'flat' }
+  return {
+    text: `${changeRate > 0 ? '▲' : '▼'}${Math.abs(changeRate).toFixed(1)}%`,
+    tone: changeRate > 0 ? 'up' : 'down',
+  }
+}
+
 function formatRoasPercent(value: number | null | undefined) {
   if (value === null || value === undefined || value === 0) return '-'
   return `${numberFormatter.format(Math.round(value * 100))}%`
@@ -408,6 +425,20 @@ function MetricCard({ title, value, delta, helper, accent, icon, valueSize = 'de
       {delta ? <p className="metric-card__delta">{delta}</p> : null}
       {helper ? <p className="metric-card__helper">{helper}</p> : null}
     </article>
+  )
+}
+
+function renderTrendMetric(valueText: string, delta: TrendDelta) {
+  return (
+    <span className="kp-dashboard__trend-value">
+      <span>{valueText}</span>
+      <span
+        className={`kp-dashboard__trend-delta kp-dashboard__trend-delta--${delta.tone}`}
+        data-dashboard-only="true"
+      >
+        {delta.text}
+      </span>
+    </span>
   )
 }
 
@@ -713,12 +744,30 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
 
   const sixMonthRows = useMemo(
     () =>
-      latestSixMonths.map((row) => ({
-        ...row,
-        opt_in_count: row.push_opt_in_members ?? row.sms_opt_in_members,
-        average_dau: monthlyAverageDau(data?.activityDaily ?? [], row.report_month),
-      })),
-    [data?.activityDaily, latestSixMonths],
+      latestSixMonths.map((row) => {
+        const rowIndex = meaningfulOverview.findIndex((overviewRow) => overviewRow.report_month === row.report_month)
+        const previous = rowIndex > 0 ? meaningfulOverview[rowIndex - 1] : undefined
+        const optInCount = row.push_opt_in_members ?? row.sms_opt_in_members
+        const previousOptInCount = previous?.push_opt_in_members ?? previous?.sms_opt_in_members
+        const averageDau = monthlyAverageDau(data?.activityDaily ?? [], row.report_month)
+        const previousAverageDau = previous ? monthlyAverageDau(data?.activityDaily ?? [], previous.report_month) : null
+
+        return {
+          ...row,
+          opt_in_count: optInCount,
+          average_dau: averageDau,
+          deltas: {
+            new_members: buildTrendDelta(row.new_members, previous?.new_members),
+            app_downloads: buildTrendDelta(row.app_downloads, previous?.app_downloads),
+            opt_in_count: buildTrendDelta(optInCount, previousOptInCount),
+            linked_sales_amount: buildTrendDelta(row.linked_sales_amount, previous?.linked_sales_amount),
+            ad_revenue: buildTrendDelta(row.ad_revenue, previous?.ad_revenue),
+            reported_mau: buildTrendDelta(row.reported_mau, previous?.reported_mau),
+            average_dau: buildTrendDelta(averageDau, previousAverageDau),
+          },
+        }
+      }),
+    [data?.activityDaily, latestSixMonths, meaningfulOverview],
   )
 
   const previousAverageDau = useMemo(
@@ -900,6 +949,7 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
 
     metricsClone.classList.add('report-dom-clone__metrics')
     summaryClone.classList.add('report-dom-clone__panel', 'report-dom-clone__panel--summary')
+    summaryClone.querySelectorAll('[data-dashboard-only="true"]').forEach((node) => node.remove())
     promotionClone.classList.add('report-dom-clone__panel', 'report-dom-clone__panel--promotion')
     bottomRow.className = 'report-dashboard-clone__bottom'
     insightRow.className = 'report-dashboard-clone__insight-flow'
@@ -1324,13 +1374,13 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
                 {sixMonthRows.slice().reverse().map((row) => (
                   <tr key={row.report_month} className={row.report_month === currentRow.report_month ? 'is-selected' : ''}>
                     <td>{monthLabel(row.report_month)}</td>
-                    <td>{formatNumber(row.new_members)}</td>
-                    <td>{formatNumber(row.app_downloads)}</td>
-                    <td>{formatNumber(row.opt_in_count)}</td>
-                    <td>{formatCurrency(row.linked_sales_amount)}</td>
-                    <td>{formatCurrency(row.ad_revenue)}</td>
-                    <td>{formatNumber(row.reported_mau)}</td>
-                    <td>{formatNumber(row.average_dau)}</td>
+                    <td>{renderTrendMetric(formatNumber(row.new_members), row.deltas.new_members)}</td>
+                    <td>{renderTrendMetric(formatNumber(row.app_downloads), row.deltas.app_downloads)}</td>
+                    <td>{renderTrendMetric(formatNumber(row.opt_in_count), row.deltas.opt_in_count)}</td>
+                    <td>{renderTrendMetric(formatCurrency(row.linked_sales_amount), row.deltas.linked_sales_amount)}</td>
+                    <td>{renderTrendMetric(formatCurrency(row.ad_revenue), row.deltas.ad_revenue)}</td>
+                    <td>{renderTrendMetric(formatNumber(row.reported_mau), row.deltas.reported_mau)}</td>
+                    <td>{renderTrendMetric(formatNumber(row.average_dau), row.deltas.average_dau)}</td>
                   </tr>
                 ))}
               </tbody>
