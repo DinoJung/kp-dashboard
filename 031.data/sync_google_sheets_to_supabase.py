@@ -27,7 +27,7 @@ SHEET_RANGES = {
     'guide': 'guide!A:D',
     'raw_member': 'raw_member!A:ZZ',
     'raw_event': 'raw_event!A:J',
-    'raw_ad': 'raw_ad!A:T',
+    'raw_ad': 'raw_ad!A:ZZ',
     'raw_optin': 'raw_optin!A:D',
     'daily_activity': 'daily_activity!A:C',
     'monthly_activity': 'monthly_activity!A:C',
@@ -388,6 +388,7 @@ def build_payloads(spreadsheet_id: str) -> dict[str, Any]:
             'clicks': to_int(row.get('clicks')),
             'cpc': to_float(row.get('cpc')),
             'ctr': to_float(row.get('ctr')),
+            'signup_count': to_int(row.get('signup_count') or row.get('signups') or row.get('회원가입')),
             'conversions': to_int(row.get('conversions')),
             'conversion_rate': to_float(row.get('conversion_rate')),
             'revenue': to_int(row.get('revenue')),
@@ -409,6 +410,7 @@ def build_payloads(spreadsheet_id: str) -> dict[str, Any]:
                 'clicks': item['clicks'],
                 'cpc': item['cpc'],
                 'ctr': item['ctr'],
+                'signup_count': item['signup_count'],
                 'conversions': item['conversions'],
                 'conversion_rate': item['conversion_rate'],
                 'revenue': item['revenue'],
@@ -585,10 +587,10 @@ def run_sync(spreadsheet_id: str, dry_run: bool) -> None:
                     f'''
                     insert into {SCHEMA}.raw_ad_monthly_detail
                     (import_batch_id, report_month, media, placement_name, period_text, campaign_goal,
-                     impressions, clicks, cpc, ctr, conversions, conversion_rate, revenue, average_order_value,
+                     impressions, clicks, cpc, ctr, signup_count, conversions, conversion_rate, revenue, average_order_value,
                      ad_spend_vat_inclusive, ad_spend_vat_exclusive, ad_spend_markup_vat_exclusive,
                      roas_vat_exclusive, roas_markup_vat_exclusive, creative_text, note)
-                    values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ''',
                     [
                         (
@@ -602,6 +604,7 @@ def run_sync(spreadsheet_id: str, dry_run: bool) -> None:
                             row['clicks'],
                             row['cpc'],
                             row['ctr'],
+                            row['signup_count'],
                             row['conversions'],
                             row['conversion_rate'],
                             row['revenue'],
@@ -747,16 +750,17 @@ def run_sync(spreadsheet_id: str, dry_run: bool) -> None:
                 cur.executemany(
                     f'''
                     insert into {SCHEMA}.monthly_ad_summary
-                    (report_month, media, impressions, clicks, cpc, ctr, conversions, conversion_rate,
+                    (report_month, media, impressions, clicks, cpc, ctr, signup_count, conversions, conversion_rate,
                      revenue, average_order_value, ad_spend_vat_exclusive, ad_spend_markup_vat_exclusive,
                      roas_vat_exclusive, roas_markup_vat_exclusive, source_import_batch_id)
-                    values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     on conflict (report_month) do update set
                       media = excluded.media,
                       impressions = excluded.impressions,
                       clicks = excluded.clicks,
                       cpc = excluded.cpc,
                       ctr = excluded.ctr,
+                      signup_count = excluded.signup_count,
                       conversions = excluded.conversions,
                       conversion_rate = excluded.conversion_rate,
                       revenue = excluded.revenue,
@@ -776,6 +780,7 @@ def run_sync(spreadsheet_id: str, dry_run: bool) -> None:
                             row['clicks'],
                             row['cpc'],
                             row['ctr'],
+                            row['signup_count'],
                             row['conversions'],
                             row['conversion_rate'],
                             row['revenue'],

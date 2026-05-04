@@ -49,6 +49,7 @@ type MonthlyOverviewRow = {
   clicks: number | null
   cpc: number | null
   ctr: number | null
+  signup_count: number | null
   conversions: number | null
   conversion_rate: number | null
   ad_revenue: number | null
@@ -78,6 +79,7 @@ type AdCampaignRow = {
   clicks: number | null
   cpc: number | null
   ctr: number | null
+  signup_count: number | null
   conversions: number | null
   conversion_rate: number | null
   revenue: number | null
@@ -724,11 +726,13 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
 
   const campaignTotals = useMemo(() => {
     const adSpend = campaignsForMonth.reduce((sum, row) => sum + (row.ad_spend_markup_vat_exclusive ?? 0), 0)
+    const signupCount = campaignsForMonth.reduce((sum, row) => sum + (row.signup_count ?? 0), 0)
     const revenue = campaignsForMonth.reduce((sum, row) => sum + (row.revenue ?? 0), 0)
     const impressions = campaignsForMonth.reduce((sum, row) => sum + (row.impressions ?? 0), 0)
     const clicks = campaignsForMonth.reduce((sum, row) => sum + (row.clicks ?? 0), 0)
     return {
       adSpend,
+      signupCount,
       revenue,
       roas: adSpend > 0 ? revenue / adSpend : null,
       ctr: impressions > 0 ? clicks / impressions : null,
@@ -1455,6 +1459,7 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
                 <tr>
                   <th>캠페인</th>
                   <th>광고비 (마크업, vat-)</th>
+                  <th>회원가입</th>
                   <th>광고 기여매출</th>
                   <th>ROAS</th>
                   <th>CTR</th>
@@ -1467,6 +1472,7 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
                   <tr key={`${row.report_month}-${row.placement_name}-${row.campaign_goal}`}> 
                     <td>{formatCampaignLabel(row.placement_name)}</td>
                     <td>{formatNullableCurrency(row.ad_spend_markup_vat_exclusive)}</td>
+                    <td>{formatNullableNumber(row.signup_count)}</td>
                     <td>{formatNullableCurrency(row.revenue)}</td>
                     <td>{formatRoasPercent(row.roas_markup_vat_exclusive)}</td>
                     <td>{formatNullableRatio(row.ctr)}</td>
@@ -1479,6 +1485,7 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
                 <tr>
                   <td>Total</td>
                   <td>{formatCurrency(campaignTotals.adSpend)}</td>
+                  <td>{formatNumber(campaignTotals.signupCount)}</td>
                   <td>{formatCurrency(campaignTotals.revenue)}</td>
                   <td>{formatRoasPercent(campaignTotals.roas)}</td>
                   <td>{formatRatio(campaignTotals.ctr)}</td>

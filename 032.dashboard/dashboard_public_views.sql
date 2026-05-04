@@ -53,6 +53,7 @@ select
   clicks,
   cpc,
   ctr,
+  signup_count,
   conversions,
   conversion_rate,
   revenue,
