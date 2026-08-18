@@ -6,18 +6,37 @@ import sys
 import unittest
 
 
-MODULE_PATH = pathlib.Path('/home/j1nu/workspace/10.work/03.KPdash/031.data/fetch_icebiscuit_meta_ads.py')
+MODULE_PATH = pathlib.Path(__file__).resolve().parents[1] / 'fetch_icebiscuit_meta_ads.py'
 
 
 def load_module():
     sys.modules.pop('fetch_icebiscuit_meta_ads_under_test', None)
     spec = importlib.util.spec_from_file_location('fetch_icebiscuit_meta_ads_under_test', MODULE_PATH)
+    if spec is None:
+        raise RuntimeError(f'Unable to load test module: {MODULE_PATH}')
+    loader = spec.loader
+    if loader is None:
+        raise RuntimeError(f'Unable to load test module: {MODULE_PATH}')
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    loader.exec_module(module)
     return module
 
 
 class BuildRowsTest(unittest.TestCase):
+    def test_build_insights_url_does_not_include_access_token(self):
+        mod = load_module()
+
+        url = mod.build_insights_url(
+            account_id='act_123',
+            api_version='v23.0',
+            since=mod.parse_iso_date('2026-04-16'),
+            until=mod.parse_iso_date('2026-04-16'),
+            level='campaign',
+        )
+
+        self.assertNotIn('access_token', url)
+        self.assertNotIn('test-token', url)
+
     def test_build_rows_deduplicates_purchase_aliases_in_actions_and_values(self):
         mod = load_module()
         payload = {

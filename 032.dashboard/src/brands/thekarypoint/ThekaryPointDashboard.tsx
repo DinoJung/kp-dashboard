@@ -144,11 +144,14 @@ type TrendDelta = {
 
 type ReportExportMode = 'pdf' | 'ppt' | 'ppt2'
 
+type FormSubmitEvent = {
+  preventDefault: () => void
+}
+
+type AuthErrorType = 'credentials' | 'system' | 'validation'
+
 const MEMBER_TARGET_2026 = 280_000
 const APP_DOWNLOAD_TARGET_2026 = 130_000
-
-const DASHBOARD_PASSWORD = (import.meta.env.VITE_DASHBOARD_PASSWORD as string | undefined) ?? 'thekary'
-const DASHBOARD_AUTH_KEY = (import.meta.env.VITE_DASHBOARD_AUTH_KEY as string | undefined) ?? 'thekary-dashboard-authenticated'
 
 const REPORT_STEPS = [
   { key: 'summary', label: 'SUMMARY' },
@@ -496,8 +499,11 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
   const [isPromotionExpanded, setIsPromotionExpanded] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
+  const [emailInput, setEmailInput] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
-  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [authErrorType, setAuthErrorType] = useState<AuthErrorType | null>(null)
+  const [isSigningIn, setIsSigningIn] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isReportConfirmOpen, setIsReportConfirmOpen] = useState(false)
   const [reportExportMode, setReportExportMode] = useState<ReportExportMode>('pdf')
@@ -513,9 +519,45 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
   const promotionPanelRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    const savedAuth = window.sessionStorage.getItem(DASHBOARD_AUTH_KEY)
-    setIsAuthenticated(savedAuth === 'true')
-    setAuthChecked(true)
+    if (!supabase) {
+      setAuthChecked(true)
+      return
+    }
+
+    let active = true
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return
+      setIsAuthenticated(Boolean(session))
+      setAuthChecked(true)
+    })
+
+    let timeoutId: number | undefined
+    const sessionCheck = Promise.race([
+      supabase.auth.getSession(),
+      new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(() => reject(new Error('Supabase session check timed out.')), 1500)
+      }),
+    ])
+
+    void sessionCheck
+      .then(({ data: { session } }) => {
+        if (!active) return
+        setIsAuthenticated(Boolean(session))
+        setAuthChecked(true)
+      })
+      .catch(() => {
+        if (!active) return
+        setIsAuthenticated(false)
+        setAuthChecked(true)
+      })
+      .finally(() => {
+        if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+      })
+
+    return () => {
+      active = false
+      data.subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
@@ -560,16 +602,57 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
     }
   }, [authChecked, isAuthenticated])
 
-  function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSignInSubmit(event: FormSubmitEvent) {
     event.preventDefault()
-    if (passwordInput.trim() !== DASHBOARD_PASSWORD) {
-      setPasswordError('비밀번호가 올바르지 않습니다.')
+    if (!supabase) {
+      setAuthError('Supabase 환경변수가 설정되지 않았습니다.')
+      setAuthErrorType('system')
       return
     }
-    window.sessionStorage.setItem(DASHBOARD_AUTH_KEY, 'true')
-    setPasswordError(null)
-    setIsAuthenticated(true)
-    setLoading(true)
+
+    const email = emailInput.trim()
+    if (!email || !passwordInput) {
+      setAuthError('이메일과 비밀번호를 입력해 주세요.')
+      setAuthErrorType('validation')
+      return
+    }
+
+    setIsSigningIn(true)
+    setAuthError(null)
+    setAuthErrorType(null)
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: passwordInput,
+      })
+      if (signInError) {
+        setAuthError('로그인 정보를 확인해 주세요.')
+        setAuthErrorType('credentials')
+      } else {
+        setPasswordInput('')
+      }
+    } catch {
+      setAuthError('로그인 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      setAuthErrorType('system')
+    } finally {
+      setIsSigningIn(false)
+    }
+  }
+
+  async function handleSignOut() {
+    if (!supabase) return
+    try {
+      const { error: signOutError } = await supabase.auth.signOut()
+      if (signOutError) {
+        setAuthError('로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+        setAuthErrorType('system')
+        return
+      }
+      setIsSettingsOpen(false)
+    } catch {
+      setAuthError('로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      setAuthErrorType('system')
+    }
   }
 
   const meaningfulOverview = useMemo(() => {
@@ -1181,25 +1264,60 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
   if (!isAuthenticated) {
     return (
       <div className="auth-screen">
-        <form className="auth-card" onSubmit={handlePasswordSubmit}>
+        <form className="auth-card" onSubmit={handleSignInSubmit}>
           <div className="auth-card__icon">
             <Lock size={20} />
           </div>
           <p className="eyebrow">THEKARY POINT DASHBOARD</p>
-          <h1>암호를 입력해주세요.</h1>
-          <input
-            className="auth-card__input"
-            type="password"
-            value={passwordInput}
-            onChange={(event) => {
-              setPasswordInput(event.target.value)
-              if (passwordError) setPasswordError(null)
-            }}
-            placeholder="비밀번호 입력"
-          />
-          {passwordError ? <p className="auth-card__error">{passwordError}</p> : null}
-          <button className="primary-button auth-card__button" type="submit">
-            확인
+          <h1>로그인해 주세요.</h1>
+          <p className="auth-card__description">등록된 계정으로 로그인해 주세요.</p>
+          <label className="auth-card__field">
+            <span>이메일</span>
+            <input
+              className="auth-card__input"
+              type="email"
+              autoComplete="username"
+              value={emailInput}
+              onChange={(event) => {
+                setEmailInput(event.target.value)
+                if (authError) {
+                  setAuthError(null)
+                  setAuthErrorType(null)
+                }
+              }}
+              placeholder="이메일"
+              aria-invalid={authErrorType === 'credentials' ? true : undefined}
+              aria-describedby={authErrorType === 'credentials' ? 'auth-error' : undefined}
+              required
+            />
+          </label>
+          <label className="auth-card__field">
+            <span>비밀번호</span>
+            <input
+              className="auth-card__input"
+              type="password"
+              autoComplete="current-password"
+              value={passwordInput}
+              onChange={(event) => {
+                setPasswordInput(event.target.value)
+                if (authError) {
+                  setAuthError(null)
+                  setAuthErrorType(null)
+                }
+              }}
+              placeholder="비밀번호"
+              aria-invalid={authErrorType === 'credentials' ? true : undefined}
+              aria-describedby={authErrorType === 'credentials' ? 'auth-error' : undefined}
+              required
+            />
+          </label>
+          {authError ? (
+            <p id="auth-error" className="auth-card__error" role="alert">
+              {authError}
+            </p>
+          ) : null}
+          <button className="primary-button auth-card__button" type="submit" disabled={isSigningIn}>
+            {isSigningIn ? '로그인 중…' : '로그인'}
           </button>
         </form>
       </div>
@@ -1286,6 +1404,10 @@ export default function ThekaryPointDashboard({ onAuthStateChange }: ThekaryPoin
                 >
                   <FileText size={16} /> {isGeneratingReport && reportExportMode === 'ppt2' ? 'PPT 리포트 생성 중…' : 'PPT 리포트 생성'}
                 </button>
+                <button className="settings-menu__item" type="button" onClick={() => void handleSignOut()}>
+                  <Lock size={16} /> 로그아웃
+                </button>
+                {authError ? <p className="auth-card__error">{authError}</p> : null}
               </div>
             ) : null}
           </div>

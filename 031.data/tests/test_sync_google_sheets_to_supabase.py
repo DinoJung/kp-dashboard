@@ -7,18 +7,34 @@ import types
 import unittest
 
 
-MODULE_PATH = pathlib.Path('/home/j1nu/workspace/10.work/03.KPdash/031.data/sync_google_sheets_to_supabase.py')
+MODULE_PATH = pathlib.Path(__file__).resolve().parents[1] / 'sync_google_sheets_to_supabase.py'
 
 
 def load_module():
     sys.modules.pop('sync_google_sheets_to_supabase_under_test', None)
     spec = importlib.util.spec_from_file_location('sync_google_sheets_to_supabase_under_test', MODULE_PATH)
+    if spec is None:
+        raise RuntimeError(f'Unable to load test module: {MODULE_PATH}')
+    loader = spec.loader
+    if loader is None:
+        raise RuntimeError(f'Unable to load test module: {MODULE_PATH}')
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    loader.exec_module(module)
     return module
 
 
 class BuildPayloadsTest(unittest.TestCase):
+    def test_spreadsheet_override_requires_dry_run_and_explicit_opt_in(self):
+        mod = load_module()
+
+        with self.assertRaises(ValueError):
+            mod.validate_spreadsheet_id('unapproved', allow_override=False, dry_run=True)
+        with self.assertRaises(ValueError):
+            mod.validate_spreadsheet_id('unapproved', allow_override=True, dry_run=False)
+
+        mod.validate_spreadsheet_id('unapproved', allow_override=True, dry_run=True)
+        mod.validate_spreadsheet_id(mod.SPREADSHEET_ID, allow_override=False, dry_run=False)
+
     def test_raw_member_merged_metrics_override_legacy_tabs(self):
         mod = load_module()
         sample_rows = {
@@ -64,7 +80,7 @@ class BuildPayloadsTest(unittest.TestCase):
                 {'report_month': '2026-04-01', 'mau': '99999', 'source_note': 'legacy'},
             ],
         }
-        mod.rows_from_sheet = lambda spreadsheet_id, a1_range: sample_rows.get(a1_range, [])
+        setattr(mod, 'rows_from_sheet', lambda spreadsheet_id, a1_range: sample_rows.get(a1_range, []))
 
         payload = mod.build_payloads('dummy')
 
@@ -103,7 +119,7 @@ class BuildPayloadsTest(unittest.TestCase):
                 {'report_month': '2026-05-01', 'mau': '22222', 'source_note': 'legacy'},
             ],
         }
-        mod.rows_from_sheet = lambda spreadsheet_id, a1_range: sample_rows.get(a1_range, [])
+        setattr(mod, 'rows_from_sheet', lambda spreadsheet_id, a1_range: sample_rows.get(a1_range, []))
 
         payload = mod.build_payloads('dummy')
 
@@ -143,7 +159,7 @@ class BuildPayloadsTest(unittest.TestCase):
             mod.SHEET_RANGES['daily_activity']: [],
             mod.SHEET_RANGES['monthly_activity']: [],
         }
-        mod.rows_from_sheet = lambda spreadsheet_id, a1_range: sample_rows.get(a1_range, [])
+        setattr(mod, 'rows_from_sheet', lambda spreadsheet_id, a1_range: sample_rows.get(a1_range, []))
 
         payload = mod.build_payloads('dummy')
 
@@ -178,7 +194,7 @@ class BuildPayloadsTest(unittest.TestCase):
                 return sample_rows[a1_range]
             raise mod.subprocess.CalledProcessError(1, ['gws'], stderr='Unable to parse range: missing sheet')
 
-        mod.rows_from_sheet = fake_rows
+        setattr(mod, 'rows_from_sheet', fake_rows)
 
         payload = mod.build_payloads('dummy')
 

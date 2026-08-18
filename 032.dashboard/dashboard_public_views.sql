@@ -89,9 +89,15 @@ select
   dau
 from thekary_point.daily_activity_metrics;
 
-grant usage on schema public to anon, authenticated;
-grant select on public.dashboard_monthly_overview to anon, authenticated;
-grant select on public.dashboard_promotion_breakdown to anon, authenticated;
-grant select on public.dashboard_ad_campaign_breakdown to anon, authenticated;
-grant select on public.dashboard_member_daily to anon, authenticated;
-grant select on public.dashboard_activity_daily to anon, authenticated;
+-- The dashboard requires a Supabase Auth session. Never expose KPI views to anon.
+grant usage on schema public to authenticated;
+revoke all on table public.dashboard_monthly_overview from anon;
+revoke all on table public.dashboard_promotion_breakdown from anon;
+revoke all on table public.dashboard_ad_campaign_breakdown from anon;
+revoke all on table public.dashboard_member_daily from anon;
+revoke all on table public.dashboard_activity_daily from anon;
+grant select on public.dashboard_monthly_overview to authenticated;
+grant select on public.dashboard_promotion_breakdown to authenticated;
+grant select on public.dashboard_ad_campaign_breakdown to authenticated;
+grant select on public.dashboard_member_daily to authenticated;
+grant select on public.dashboard_activity_daily to authenticated;

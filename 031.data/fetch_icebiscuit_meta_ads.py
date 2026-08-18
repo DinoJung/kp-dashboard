@@ -12,7 +12,7 @@ from typing import Any, Literal
 import psycopg
 from dotenv import dotenv_values
 
-ROOT = Path('/home/j1nu/workspace/10.work/03.KPdash')
+ROOT = Path(__file__).resolve().parents[1]
 ENV_PATH = ROOT / '.env'
 SCHEMA = 'icebiscuit_meta'
 DEFAULT_META_API_VERSION = 'v23.0'
@@ -84,7 +84,7 @@ def meta_account_id(raw_value: str) -> str:
     return f'act_{account}'
 
 
-def build_insights_url(account_id: str, access_token: str, api_version: str, since: date, until: date, level: InsightLevel, after: str | None = None) -> str:
+def build_insights_url(account_id: str, api_version: str, since: date, until: date, level: InsightLevel, after: str | None = None) -> str:
     fields = [
         'date_start',
         'date_stop',
@@ -108,7 +108,6 @@ def build_insights_url(account_id: str, access_token: str, api_version: str, sin
         fields.extend(['adset_id', 'adset_name', 'ad_id', 'ad_name'])
 
     params = {
-        'access_token': access_token,
         'level': level,
         'time_increment': '1',
         'time_range': json.dumps({'since': since.isoformat(), 'until': until.isoformat()}),
@@ -121,8 +120,14 @@ def build_insights_url(account_id: str, access_token: str, api_version: str, sin
     return f'https://graph.facebook.com/{api_version}/{account_id}/insights?{query}'
 
 
-def fetch_json(url: str) -> dict[str, Any]:
-    request = urllib.request.Request(url, headers={'Accept': 'application/json'})
+def fetch_json(url: str, access_token: str) -> dict[str, Any]:
+    request = urllib.request.Request(
+        url,
+        headers={
+            'Accept': 'application/json',
+            'Authorization': f'Bearer {access_token}',
+        },
+    )
     with urllib.request.urlopen(request, timeout=60) as response:
         payload = response.read().decode('utf-8')
     return json.loads(payload)
@@ -201,7 +206,10 @@ def build_rows(
     rows: list[dict[str, Any]] = []
     after: str | None = None
     while True:
-        page = payload if after is None else fetch_json(build_insights_url(account_id, access_token, api_version, since, until, level, after))
+        page = payload if after is None else fetch_json(
+            build_insights_url(account_id, api_version, since, until, level, after),
+            access_token,
+        )
         for item in page.get('data', []):
             actions = item.get('actions') or []
             action_values = item.get('action_values') or []
@@ -407,7 +415,10 @@ def persist_rows(rows: list[dict[str, Any]], cfg: dict[str, str], account_id: st
                     'completed',
                 ),
             )
-            import_batch_id = cur.fetchone()[0]
+            batch_row = cur.fetchone()
+            if batch_row is None:
+                raise RuntimeError('Failed to create a META import batch.')
+            import_batch_id = batch_row[0]
 
             if level == 'campaign':
                 persist_campaign_rows(rows, cur, import_batch_id, delete_account_ids, report_dates)
@@ -434,8 +445,8 @@ def main() -> None:
         raise RuntimeError('META_ACCESS_TOKEN is missing in /10.work/03.KPdash/.env')
 
     account_id = meta_account_id(raw_account_id)
-    first_url = build_insights_url(account_id, access_token, api_version, since, until, args.level)
-    first_payload = fetch_json(first_url)
+    first_url = build_insights_url(account_id, api_version, since, until, args.level)
+    first_payload = fetch_json(first_url, access_token)
     rows = build_rows(first_payload, args.level, account_id, access_token, api_version, since, until)
     print_summary(rows, account_id, since, until, args.level)
     if args.dry_run:

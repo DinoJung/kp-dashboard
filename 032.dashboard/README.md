@@ -17,7 +17,7 @@ React + TypeScript + Vite 기반 월간 성과 대시보드야.
 ## 실행
 
 ```bash
-cd /home/j1nu/workspace/10.work/03.KPdash/032.dashboard
+cd 032.dashboard
 npm install
 npm run dev
 ```
@@ -34,21 +34,25 @@ VITE_SOURCE_SHEET_URL=https://docs.google.com/spreadsheets/d/.../edit#gid=0
 
 - `VITE_SOURCE_SHEET_URL`은 선택값
 - 넣으면 우측 상단에 원본 시트 열기 버튼이 표시됨
+- 로그인은 Supabase Auth에 초대된 계정의 이메일과 비밀번호로 수행함
+- Supabase 대시보드에서 공개 회원가입을 끄고 허용된 사용자만 초대해야 함
 
 ## Supabase 준비 상태
 
-프론트에서 바로 읽을 수 있도록 아래 public views를 생성해둠.
+인증된 프론트에서 읽을 수 있도록 아래 public views를 생성해둠.
 - `public.dashboard_monthly_overview`
 - `public.dashboard_promotion_breakdown`
 - `public.dashboard_ad_campaign_breakdown`
 - `public.dashboard_member_daily`
+- `public.dashboard_activity_daily`
+- `public.dashboard_icebiscuit_*`
 
 정의 파일
-- `/home/j1nu/workspace/10.work/03.KPdash/032.dashboard_public_views.sql`
+- `032.dashboard/dashboard_public_views.sql`
 
 ## Vercel 배포 메모
 
-이 프로젝트는 `dashboard` 폴더를 Vercel Root Directory로 잡으면 돼.
+이 프로젝트는 `032.dashboard` 폴더를 Vercel Root Directory로 잡으면 돼.
 
 필요한 환경변수
 - `VITE_SUPABASE_URL`
@@ -56,7 +60,7 @@ VITE_SOURCE_SHEET_URL=https://docs.google.com/spreadsheets/d/.../edit#gid=0
 - `VITE_SOURCE_SHEET_URL` 선택
 
 Vercel 설정 파일
-- `dashboard/vercel.json`
+- `032.dashboard/vercel.json`
 
 ## Google Sheets 동기화
 
@@ -65,13 +69,12 @@ Vercel 설정 파일
 - https://docs.google.com/spreadsheets/d/1bALRM_uxx4UbVdjIDuk8JE5-hGp1rjyy0Xuf3gHS8gQ/edit
 
 동기화 스크립트
-- `/10.work/03.KPdash/031.data/sync_google_sheets_to_supabase.py`
+- `031.data/sync_google_sheets_to_supabase.py`
 
 사용 예시
 ```bash
-cd /10.work/03.KPdash
-.venv/bin/python sync_google_sheets_to_supabase.py --dry-run
-.venv/bin/python sync_google_sheets_to_supabase.py
+./.venv/bin/python 031.data/sync_google_sheets_to_supabase.py --dry-run
+./.venv/bin/python 031.data/sync_google_sheets_to_supabase.py
 ```
 
 시트 탭 구성

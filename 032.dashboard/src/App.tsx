@@ -1,7 +1,8 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import './App.css'
 import ThekaryPointDashboard from './brands/thekarypoint/ThekaryPointDashboard'
+import { supabase } from './lib/supabase'
 
 const IcebiscuitDashboard = lazy(() => import('./brands/icebiscuit/IcebiscuitDashboard'))
 
@@ -29,14 +30,33 @@ const BRAND_TABS: BrandTab[] = [
 export default function App() {
   const [activeBrand, setActiveBrand] = useState<BrandKey>('thekarypoint')
   const [showBrandTabs, setShowBrandTabs] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [sidebarPinnedOpen, setSidebarPinnedOpen] = useState(false)
   const [sidebarHovered, setSidebarHovered] = useState(false)
 
+  useEffect(() => {
+    if (!supabase) return
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextIsAuthenticated = Boolean(session)
+      setIsAuthenticated(nextIsAuthenticated)
+      if (!nextIsAuthenticated) {
+        setActiveBrand('thekarypoint')
+        setShowBrandTabs(false)
+      }
+    })
+
+    return () => {
+      data.subscription.unsubscribe()
+    }
+  }, [])
+
   const sidebarExpanded = sidebarPinnedOpen || sidebarHovered
+  const workspaceVisible = showBrandTabs && isAuthenticated
 
   return (
-    <div className={`dashboard-shell dashboard-shell--brand-tabs${showBrandTabs ? ' dashboard-shell--workspace' : ''}`}>
-      {showBrandTabs ? (
+    <div className={`dashboard-shell dashboard-shell--brand-tabs${workspaceVisible ? ' dashboard-shell--workspace' : ''}`}>
+      {workspaceVisible ? (
         <div className={`dashboard-workspace-shell${sidebarExpanded ? ' is-sidebar-expanded' : ''}`}>
           <aside
             className={`brand-sidebar${sidebarExpanded ? ' is-expanded' : ''}`}

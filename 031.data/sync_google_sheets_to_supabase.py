@@ -14,7 +14,7 @@ from typing import Any
 import psycopg
 from dotenv import dotenv_values
 
-ROOT = Path('/home/j1nu/workspace/10.work/03.KPdash')
+ROOT = Path(__file__).resolve().parents[1]
 ENV_PATH = ROOT / '.env'
 SCHEMA = 'thekary_point'
 SPREADSHEET_ID = '1bALRM_uxx4UbVdjIDuk8JE5-hGp1rjyy0Xuf3gHS8gQ'
@@ -58,7 +58,21 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Sync Dashboard-main Google Sheets data into Supabase.')
     parser.add_argument('--dry-run', action='store_true', help='Parse the sheet and print counts without writing to Supabase.')
     parser.add_argument('--spreadsheet-id', default=SPREADSHEET_ID)
+    parser.add_argument(
+        '--allow-spreadsheet-override',
+        action='store_true',
+        help='Allow a non-production spreadsheet ID for dry-run validation only.',
+    )
     return parser.parse_args()
+
+
+def validate_spreadsheet_id(spreadsheet_id: str, allow_override: bool, dry_run: bool) -> None:
+    if spreadsheet_id == SPREADSHEET_ID:
+        return
+    if not allow_override:
+        raise ValueError('Refusing an unapproved spreadsheet ID.')
+    if not dry_run:
+        raise ValueError('Spreadsheet overrides are limited to --dry-run.')
 
 
 def resolve_gws_bin() -> str:
@@ -518,7 +532,10 @@ def run_sync(spreadsheet_id: str, dry_run: bool) -> None:
                     'completed',
                 ),
             )
-            import_batch_id = cur.fetchone()[0]
+            batch_row = cur.fetchone()
+            if batch_row is None:
+                raise RuntimeError('Failed to create a Google Sheets import batch.')
+            import_batch_id = batch_row[0]
 
             if member_dates:
                 cur.execute(f'delete from {SCHEMA}.raw_member_daily where report_date = any(%s)', (member_dates,))
@@ -822,4 +839,8 @@ def run_sync(spreadsheet_id: str, dry_run: bool) -> None:
 
 if __name__ == '__main__':
     args = parse_args()
+    try:
+        validate_spreadsheet_id(args.spreadsheet_id, args.allow_spreadsheet_override, args.dry_run)
+    except ValueError as exc:
+        raise SystemExit(f'{exc} Use --allow-spreadsheet-override for dry-run validation.') from exc
     run_sync(spreadsheet_id=args.spreadsheet_id, dry_run=args.dry_run)

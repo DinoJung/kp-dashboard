@@ -18,11 +18,12 @@ node_modules/
 dist/
 coverage/
 .dashboard-cache/
+*.tsbuildinfo
 
-# Vite / local env
-dashboard/.env.local
-dashboard/node_modules/
-dashboard/dist/
+# Workspace / generated output
+.omo/
+033.export/
+.vercel/
 
 # OS / editor
 .DS_Store
